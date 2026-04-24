@@ -83,15 +83,16 @@ def svg_tiger_logo(x=28, y=18, size=74):
     encoded = base64.b64encode(tiger_image_path.read_bytes()).decode("ascii")
     circle_cx = x + size / 2
     circle_cy = y + size / 2
-    image_size = size * 1.18
-    image_offset = (image_size - size) / 2
+    image_size = size * 2.15
+    image_x = circle_cx - image_size / 2
+    image_y = circle_cy - image_size * 0.31
 
     return [
         "<defs>",
         f'<clipPath id="tiger-logo-clip"><circle cx="{circle_cx}" cy="{circle_cy}" r="{size / 2}"/></clipPath>',
         "</defs>",
         f'<circle cx="{circle_cx}" cy="{circle_cy}" r="{size / 2}" fill="#003b96"/>',
-        f'<image x="{x - image_offset}" y="{y - image_offset}" width="{image_size}" height="{image_size}" '
+        f'<image x="{image_x}" y="{image_y}" width="{image_size}" height="{image_size}" '
         f'preserveAspectRatio="xMidYMid slice" clip-path="url(#tiger-logo-clip)" '
         f'href="data:{mime_type};base64,{encoded}"/>',
         f'<circle cx="{circle_cx}" cy="{circle_cy}" r="{size / 2}" fill="none" stroke="white" stroke-width="3"/>',

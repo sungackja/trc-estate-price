@@ -9,9 +9,10 @@ load_dotenv()
 
 API_KEY = os.getenv("MOLIT_API_KEY")
 BASE_URL = (
-    "https://openapi.molit.go.kr/OpenAPI_ToolInstallPackage/service/rest/"
-    "RTMSOBJSvc/getRTMSDataSvcAptTradeDev"
+    "http://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/"
+    "getRTMSDataSvcAptTradeDev"
 )
+REQUEST_TIMEOUT_SECONDS = 15
 
 TAG_APARTMENT = "\uc544\ud30c\ud2b8"
 TAG_PRICE = "\uac70\ub798\uae08\uc561"
@@ -34,9 +35,9 @@ def get_apartment_data(lawd_cd, deal_ym):
     }
 
     try:
-        response = requests.get(BASE_URL, params=params, timeout=15)
-    except requests.exceptions.RequestException as error:
-        print(f"Request failed: {error}")
+        response = requests.get(BASE_URL, params=params, timeout=REQUEST_TIMEOUT_SECONDS)
+    except requests.exceptions.RequestException:
+        print("Request failed. Check your internet connection, firewall, API endpoint, or API key status.")
         return
 
     if response.status_code != 200:
@@ -53,7 +54,7 @@ def get_apartment_data(lawd_cd, deal_ym):
 
     result_code = root.findtext(".//resultCode")
     result_msg = root.findtext(".//resultMsg")
-    if result_code and result_code != "00":
+    if result_code and result_code not in ("00", "000"):
         print(f"API error: {result_code} / {result_msg}")
         return
 
@@ -65,9 +66,9 @@ def get_apartment_data(lawd_cd, deal_ym):
     print(f"Loaded {len(items)} records. Showing up to {len(items)} records.\n")
 
     for item in items:
-        apt_name = (item.findtext(TAG_APARTMENT) or "Unknown").strip()
-        price = (item.findtext(TAG_PRICE) or "0").strip()
-        day = (item.findtext(TAG_DAY) or "").strip()
+        apt_name = (item.findtext("aptNm") or item.findtext(TAG_APARTMENT) or "Unknown").strip()
+        price = (item.findtext("dealAmount") or item.findtext(TAG_PRICE) or "0").strip()
+        day = (item.findtext("dealDay") or item.findtext(TAG_DAY) or "").strip()
 
         print(f"Apartment: {apt_name}")
         print(f"Price: {price} ten-thousand KRW")

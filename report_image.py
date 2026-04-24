@@ -71,7 +71,7 @@ def find_tiger_image_path():
     return None
 
 
-def svg_tiger_logo(x=28, y=18, size=74):
+def svg_tiger_logo(today_text, x=30, y=20, height=58):
     tiger_image_path = find_tiger_image_path()
     if tiger_image_path is None:
         return [
@@ -81,23 +81,22 @@ def svg_tiger_logo(x=28, y=18, size=74):
 
     mime_type = guess_type(tiger_image_path.name)[0] or "image/png"
     encoded = base64.b64encode(tiger_image_path.read_bytes()).decode("ascii")
-    circle_cx = x + size / 2
-    circle_cy = y + size / 2
-    image_size = size * 2.15
-    image_x = circle_cx - image_size / 2
-    image_y = circle_cy - image_size * 0.31
+    circle_size = height - 4
+    circle_cx = x + circle_size / 2
+    circle_cy = y + height / 2
+    image_width = circle_size * 0.92
+    image_height = circle_size * 1.12
+    image_x = circle_cx - image_width / 2
+    image_y = circle_cy - image_height / 2 - 1
 
     return [
-        "<defs>",
-        f'<clipPath id="tiger-logo-clip"><circle cx="{circle_cx}" cy="{circle_cy}" r="{size / 2}"/></clipPath>',
-        "</defs>",
-        f'<circle cx="{circle_cx}" cy="{circle_cy}" r="{size / 2}" fill="#003b96"/>',
-        f'<image x="{image_x}" y="{image_y}" width="{image_size}" height="{image_size}" '
-        f'preserveAspectRatio="xMidYMid slice" clip-path="url(#tiger-logo-clip)" '
+        f'<circle cx="{circle_cx}" cy="{circle_cy}" r="{circle_size / 2}" fill="#ffc43d"/>',
+        f'<circle cx="{circle_cx}" cy="{circle_cy}" r="{circle_size / 2}" fill="none" stroke="white" stroke-width="2"/>',
+        f'<image x="{image_x}" y="{image_y}" width="{image_width}" height="{image_height}" '
+        f'preserveAspectRatio="xMidYMid meet" '
         f'href="data:{mime_type};base64,{encoded}"/>',
-        f'<circle cx="{circle_cx}" cy="{circle_cy}" r="{size / 2}" fill="none" stroke="white" stroke-width="3"/>',
-        '<polygon points="108,36 184,24 194,57 118,68" fill="#001a9b"/>',
-        svg_text(151, 50, LABEL_TODAY, size=20, weight=700, fill="white"),
+        svg_text(x + 118, y + height / 2 + 1, LABEL_TODAY, size=36, weight=700, fill="white"),
+        svg_text(x + 238, y + height / 2 + 2, today_text, size=24, weight=700, fill="#ffe082"),
     ]
 
 
@@ -105,6 +104,7 @@ def create_report_image(target_date=None, output_path=REPORT_IMAGE_PATH, limit=3
     target_date, rows = build_report_rows(target_date, limit=limit)
     today = datetime.now(timezone(timedelta(hours=9))).date()
     today_text = f"{today.year}\ub144 {today.month:02d}\uc6d4 {today.day:02d}\uc77c"
+    today_short = f"{today.month:02d}\uc6d4 {today.day:02d}\uc77c"
 
     columns = [
         ("\uad6c\ubd84", 72, "center"),
@@ -126,8 +126,8 @@ def create_report_image(target_date=None, output_path=REPORT_IMAGE_PATH, limit=3
         "</style>",
         svg_rect(0, 0, WIDTH, height, fill="white", stroke="white"),
         svg_rect(MARGIN, 18, WIDTH - MARGIN * 2, 64, fill="#b40000", stroke="#b40000"),
-        *svg_tiger_logo(),
-        svg_text(505, 53, REPORT_TITLE, size=40, weight=700, fill="white"),
+        *svg_tiger_logo(today_short),
+        svg_text(602, 53, REPORT_TITLE, size=38, weight=700, fill="white"),
         svg_rect(MARGIN, 84, WIDTH - MARGIN * 2, 24, fill="#f5f8fb", stroke="#d9d9d9"),
         svg_text(MARGIN + 14, 97, today_text, size=15, anchor="start"),
         svg_text(WIDTH - 36, 97, TAGLINE, size=15, anchor="end"),

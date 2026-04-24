@@ -20,6 +20,7 @@ TIGER_IMAGE_PATHS = [
 WIDTH = 900
 MARGIN = 14
 ROW_HEIGHT = 28
+REPORT_INNER_WIDTH = WIDTH - MARGIN * 2
 
 LABEL_TODAY = "\uc624\ub298\uc758"
 REPORT_TITLE = "\uc11c\uc6b8 \uc544\ud30c\ud2b8 \uc2e0\uace0\uac00 \ub9ac\uc2a4\ud2b8"
@@ -106,10 +107,12 @@ def create_report_image(target_date=None, output_path=REPORT_IMAGE_PATH, limit=3
     today_text = f"{today.year}\ub144 {today.month:02d}\uc6d4 {today.day:02d}\uc77c"
     today_short = f"{today.month:02d}\uc6d4 {today.day:02d}\uc77c"
 
+    fixed_column_width = 72 + 78 + 96 + 96 + 70 + 82
+    apt_column_width = REPORT_INNER_WIDTH - fixed_column_width
     columns = [
         ("\uad6c\ubd84", 72, "center"),
         ("\uc804\uc6a9(m2)", 78, "center"),
-        ("\ub2e8\uc9c0\uba85", 230, "left"),
+        ("\ub2e8\uc9c0\uba85", apt_column_width, "left"),
         ("\uc804\uace0\uac00", 96, "center"),
         ("\uac70\ub798\uae08\uc561", 96, "center"),
         ("\uc138\ub300\uc218", 70, "center"),
@@ -125,10 +128,10 @@ def create_report_image(target_date=None, output_path=REPORT_IMAGE_PATH, limit=3
         "text { font-family: 'Malgun Gothic', 'Noto Sans CJK KR', Arial, sans-serif; }",
         "</style>",
         svg_rect(0, 0, WIDTH, height, fill="white", stroke="white"),
-        svg_rect(MARGIN, 18, WIDTH - MARGIN * 2, 64, fill="#b40000", stroke="#b40000"),
+        svg_rect(MARGIN, 18, REPORT_INNER_WIDTH, 64, fill="#b40000", stroke="#b40000"),
         *svg_tiger_logo(today_short),
         svg_text(602, 53, REPORT_TITLE, size=38, weight=700, fill="white"),
-        svg_rect(MARGIN, 84, WIDTH - MARGIN * 2, 24, fill="#f5f8fb", stroke="#d9d9d9"),
+        svg_rect(MARGIN, 84, REPORT_INNER_WIDTH, 24, fill="#f5f8fb", stroke="#d9d9d9"),
         svg_text(MARGIN + 14, 97, today_text, size=15, anchor="start"),
         svg_text(WIDTH - 36, 97, TAGLINE, size=15, anchor="end"),
     ]
@@ -153,7 +156,7 @@ def create_report_image(target_date=None, output_path=REPORT_IMAGE_PATH, limit=3
             values = [
                 row["gu_name"],
                 f"{row['exclusive_area']:.0f}",
-                fit_text(f"{row['apt_name']} ({row['umd_nm']})", 19),
+                fit_text(f"{row['apt_name']} ({row['umd_nm']})", 32),
                 format_price(row["previous_high"]),
                 format_price(row["deal_amount"]),
                 f"{household_count}" if household_count else "-",

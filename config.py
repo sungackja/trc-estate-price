@@ -14,11 +14,26 @@ MOLIT_API_KEY = os.getenv("MOLIT_API_KEY")
 APT_INFO_API_KEY = os.getenv("APT_INFO_API_KEY") or MOLIT_API_KEY
 
 MOLIT_API_URL = (
-    "http://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/"
+    "https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/"
     "getRTMSDataSvcAptTradeDev"
 )
-APT_LIST_API_URL = "http://apis.data.go.kr/1613000/AptListService3/getSidoAptList3"
-APT_BASIC_INFO_API_URL = "http://apis.data.go.kr/1613000/AptBasisInfoServiceV3/getAphusBassInfoV3"
+
+APT_LIST_API_URL = (
+    "https://apis.data.go.kr/1613000/AptListService3/"
+    "getSidoAptList3"
+)
+
+APT_BASIC_INFO_API_URL = (
+    "https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/"
+    "getAphusBassInfoV4"
+)
+
+APT_BASIC_INFO_API_URLS = [
+    "https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusBassInfoV4",
+    "http://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusBassInfoV4",
+    "https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusDtlInfoV4",
+    "http://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusDtlInfoV4",
+]
 REQUEST_TIMEOUT_SECONDS = 20
 
 SEOUL_GU_CODES = {

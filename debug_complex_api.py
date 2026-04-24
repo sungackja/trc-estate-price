@@ -3,17 +3,10 @@ from urllib.parse import urlencode
 
 import requests
 
-from config import APT_INFO_API_KEY, REQUEST_TIMEOUT_SECONDS
+from config import APT_BASIC_INFO_API_URLS, APT_INFO_API_KEY, REQUEST_TIMEOUT_SECONDS
 
 
 KAPT_CODE = "A10021295"
-
-ENDPOINTS = [
-    "http://apis.data.go.kr/1613000/AptBasisInfoServiceV3/getAphusBassInfoV3",
-    "https://apis.data.go.kr/1613000/AptBasisInfoServiceV3/getAphusBassInfoV3",
-    "http://apis.data.go.kr/1613000/AptBasisInfoServiceV3/getAphusDtlInfoV3",
-    "https://apis.data.go.kr/1613000/AptBasisInfoServiceV3/getAphusDtlInfoV3",
-]
 
 PARAM_VARIANTS = [
     {"kaptCode": KAPT_CODE},
@@ -46,22 +39,23 @@ def main():
         print("APT_INFO_API_KEY is missing.")
         return
 
-    for endpoint in ENDPOINTS:
+    for endpoint in APT_BASIC_INFO_API_URLS:
         print("=" * 80)
         print(endpoint)
-        for variant in PARAM_VARIANTS:
-            params = {"serviceKey": APT_INFO_API_KEY, **variant}
-            try:
-                response = requests.get(endpoint, params=params, timeout=REQUEST_TIMEOUT_SECONDS)
-            except requests.exceptions.RequestException as error:
-                print(f"- {json.dumps(variant)}")
-                print(f"  request failed: {type(error).__name__}: {error}")
-                continue
+        for key_name in ("serviceKey", "ServiceKey"):
+            for variant in PARAM_VARIANTS:
+                params = {key_name: APT_INFO_API_KEY, **variant}
+                try:
+                    response = requests.get(endpoint, params=params, timeout=REQUEST_TIMEOUT_SECONDS)
+                except requests.exceptions.RequestException as error:
+                    print(f"- {key_name} {json.dumps(variant)}")
+                    print(f"  request failed: {type(error).__name__}: {error}")
+                    continue
 
-            print(f"- {json.dumps(variant)}")
-            print(f"  status: {response.status_code}")
-            print(f"  url: {mask_url(response.url)}")
-            print(f"  body: {short_body(response)}")
+                print(f"- {key_name} {json.dumps(variant)}")
+                print(f"  status: {response.status_code}")
+                print(f"  url: {mask_url(response.url)}")
+                print(f"  body: {short_body(response)}")
 
 
 if __name__ == "__main__":

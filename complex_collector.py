@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 import requests
 
 from config import (
-    APT_BASIC_INFO_API_URL,
+    APT_BASIC_INFO_API_URLS,
     APT_INFO_API_KEY,
     APT_LIST_API_URL,
     REQUEST_TIMEOUT_SECONDS,
@@ -158,17 +158,28 @@ def fetch_seoul_complex_list(num_rows=1000):
 
 
 def fetch_basic_info(kapt_code):
-    params = {
-        "serviceKey": APT_INFO_API_KEY,
-        "kaptCode": kapt_code,
-    }
-    data = request_api(APT_BASIC_INFO_API_URL, params)
-    items = extract_items(data)
-    if items:
-        return items[0]
-    body = extract_body(data)
-    if isinstance(body, dict) and any(key.startswith("kapt") or key == "kaptdaCnt" for key in body):
-        return body
+    errors = []
+    for url in APT_BASIC_INFO_API_URLS:
+        for key_name in ("serviceKey", "ServiceKey"):
+            params = {
+                key_name: APT_INFO_API_KEY,
+                "kaptCode": kapt_code,
+            }
+            try:
+                data = request_api(url, params)
+            except RuntimeError as error:
+                errors.append(f"{url.rsplit('/', 1)[-1]} {key_name}: {error}")
+                continue
+
+            items = extract_items(data)
+            if items:
+                return items[0]
+            body = extract_body(data)
+            if isinstance(body, dict) and any(key.startswith("kapt") or key == "kaptdaCnt" for key in body):
+                return body
+
+    if errors:
+        raise RuntimeError(" | ".join(errors[:4]))
     return {}
 
 

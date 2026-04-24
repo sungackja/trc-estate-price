@@ -1,5 +1,7 @@
+import base64
 from datetime import datetime, timedelta, timezone
 from html import escape
+from mimetypes import guess_type
 from pathlib import Path
 
 from complexes import get_household_count_for_trade
@@ -8,6 +10,12 @@ from records import find_newly_seen_record_highs
 
 OUTPUT_DIR = Path("public")
 REPORT_IMAGE_PATH = OUTPUT_DIR / "today-record-highs.svg"
+TIGER_IMAGE_PATHS = [
+    OUTPUT_DIR / "tiger.png",
+    OUTPUT_DIR / "tiger.jpg",
+    OUTPUT_DIR / "tiger.jpeg",
+    OUTPUT_DIR / "tiger.webp",
+]
 
 WIDTH = 900
 MARGIN = 14
@@ -56,6 +64,42 @@ def svg_rect(x, y, width, height, fill="white", stroke="#d9d9d9"):
     )
 
 
+def find_tiger_image_path():
+    for path in TIGER_IMAGE_PATHS:
+        if path.exists():
+            return path
+    return None
+
+
+def svg_tiger_logo(x=28, y=18, size=74):
+    tiger_image_path = find_tiger_image_path()
+    if tiger_image_path is None:
+        return [
+            '<polygon points="42,36 172,20 184,58 54,74" fill="#001a9b"/>',
+            svg_text(112, 54, LABEL_TODAY, size=25, weight=700, fill="white"),
+        ]
+
+    mime_type = guess_type(tiger_image_path.name)[0] or "image/png"
+    encoded = base64.b64encode(tiger_image_path.read_bytes()).decode("ascii")
+    circle_cx = x + size / 2
+    circle_cy = y + size / 2
+    image_size = size * 1.18
+    image_offset = (image_size - size) / 2
+
+    return [
+        "<defs>",
+        f'<clipPath id="tiger-logo-clip"><circle cx="{circle_cx}" cy="{circle_cy}" r="{size / 2}"/></clipPath>',
+        "</defs>",
+        f'<circle cx="{circle_cx}" cy="{circle_cy}" r="{size / 2}" fill="#003b96"/>',
+        f'<image x="{x - image_offset}" y="{y - image_offset}" width="{image_size}" height="{image_size}" '
+        f'preserveAspectRatio="xMidYMid slice" clip-path="url(#tiger-logo-clip)" '
+        f'href="data:{mime_type};base64,{encoded}"/>',
+        f'<circle cx="{circle_cx}" cy="{circle_cy}" r="{size / 2}" fill="none" stroke="white" stroke-width="3"/>',
+        '<polygon points="108,36 184,24 194,57 118,68" fill="#001a9b"/>',
+        svg_text(151, 50, LABEL_TODAY, size=20, weight=700, fill="white"),
+    ]
+
+
 def create_report_image(target_date=None, output_path=REPORT_IMAGE_PATH, limit=38):
     target_date, rows = build_report_rows(target_date, limit=limit)
     today = datetime.now(timezone(timedelta(hours=9))).date()
@@ -81,9 +125,8 @@ def create_report_image(target_date=None, output_path=REPORT_IMAGE_PATH, limit=3
         "</style>",
         svg_rect(0, 0, WIDTH, height, fill="white", stroke="white"),
         svg_rect(MARGIN, 18, WIDTH - MARGIN * 2, 64, fill="#b40000", stroke="#b40000"),
-        '<polygon points="42,36 172,20 184,58 54,74" fill="#001a9b"/>',
-        svg_text(112, 54, LABEL_TODAY, size=25, weight=700, fill="white"),
-        svg_text(460, 53, REPORT_TITLE, size=42, weight=700, fill="white"),
+        *svg_tiger_logo(),
+        svg_text(505, 53, REPORT_TITLE, size=40, weight=700, fill="white"),
         svg_rect(MARGIN, 84, WIDTH - MARGIN * 2, 24, fill="#f5f8fb", stroke="#d9d9d9"),
         svg_text(MARGIN + 14, 97, today_text, size=15, anchor="start"),
         svg_text(WIDTH - 36, 97, TAGLINE, size=15, anchor="end"),

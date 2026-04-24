@@ -2,6 +2,9 @@ name: Daily record-high report
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
   schedule:
     # 06:00 KST is 21:00 UTC on the previous day.
     - cron: "0 21 * * *"

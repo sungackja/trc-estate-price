@@ -28,12 +28,6 @@ APT_BASIC_INFO_API_URL = (
     "getAphusBassInfoV4"
 )
 
-APT_BASIC_INFO_API_URLS = [
-    "https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusBassInfoV4",
-    "http://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusBassInfoV4",
-    "https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusDtlInfoV4",
-    "http://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusDtlInfoV4",
-]
 REQUEST_TIMEOUT_SECONDS = 20
 
 SEOUL_GU_CODES = {

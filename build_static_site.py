@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from complexes import get_household_count_for_trade
-from database import get_summary, init_db
+from database import get_complex_summary, get_summary, init_db
 from records import find_newly_seen_record_highs
 from report_image import REPORT_IMAGE_PATH, create_report_image, default_target_date
 
@@ -16,6 +16,7 @@ REPORT_DATE = "\ub9ac\ud3ec\ud2b8 \uae30\uc900\uc77c"
 UPDATED_AT = "\ucd5c\uadfc \uc5c5\ub370\uc774\ud2b8 \uc2dc\uac04"
 DB_RANGE = "DB \ubc94\uc704"
 TOTAL_TRADES = "\ub204\uc801 \uac70\ub798"
+COMPLEX_INFO = "\ub2e8\uc9c0\uc815\ubcf4"
 IMAGE_LABEL = "\uc774\ubbf8\uc9c0\ud615 \ub9ac\ud3ec\ud2b8"
 LIST_TITLE = "\uc804\uccb4 \uc2e0\uace0\uac00 \ub9ac\uc2a4\ud2b8"
 DISTRICT = "\uad6c"
@@ -76,10 +77,16 @@ def build_site(target_date=None):
     rows = find_newly_seen_record_highs(limit=500, seen_date=target_date)
     report_rows = [row_to_dict(row) for row in rows]
     summary = get_summary()
+    complex_summary = get_complex_summary()
 
     total_trades = summary["total_trades"] or 0
     first_date = summary["first_deal_date"] or "-"
     last_date = summary["last_deal_date"] or "-"
+    total_complexes = complex_summary["total_complexes"] or 0
+    complexes_with_households = complex_summary["complexes_with_households"] or 0
+    complex_rate = 0
+    if total_complexes:
+        complex_rate = round(complexes_with_households / total_complexes * 100, 1)
     update_time = format_update_time()
     rows_json = json.dumps(report_rows, ensure_ascii=False)
 
@@ -268,6 +275,7 @@ def build_site(target_date=None):
                 <span>{UPDATED_AT}: {update_time}</span>
                 <span>{DB_RANGE}: {first_date} ~ {last_date}</span>
                 <span>{TOTAL_TRADES}: {total_trades:,}{COUNT_SUFFIX}</span>
+                <span>{COMPLEX_INFO}: {complexes_with_households:,}/{total_complexes:,}{COUNT_SUFFIX} ({complex_rate}%)</span>
             </div>
         </div>
     </header>

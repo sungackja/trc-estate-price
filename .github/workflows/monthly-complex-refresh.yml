@@ -1,0 +1,91 @@
+name: Monthly apartment complex refresh
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 03:30 KST on the second day of each month.
+    - cron: "30 18 1 * *"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python packages
+        run: pip install -r requirements.txt
+
+      - name: Restore SQLite cache
+        uses: actions/cache@v4
+        with:
+          path: data/trades.sqlite3
+          key: trades-sqlite-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            trades-sqlite-${{ runner.os }}-
+
+      - name: Restore seed SQLite when cache is empty
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+
+          db_path = Path("data/trades.sqlite3")
+          seed_path = Path("trades-seed.zip")
+
+          if db_path.exists() and db_path.stat().st_size > 0:
+              print("SQLite DB restored from cache.")
+          elif seed_path.exists():
+              print("Restoring SQLite DB from trades-seed.zip.")
+              db_path.parent.mkdir(exist_ok=True)
+              with zipfile.ZipFile(seed_path) as archive:
+                  with archive.open("trades.sqlite3") as source:
+                      db_path.write_bytes(source.read())
+          else:
+              raise SystemExit("No SQLite cache or seed file found.")
+          PY
+
+      - name: Refresh apartment complex household counts
+        env:
+          APT_INFO_API_KEY: ${{ secrets.APT_INFO_API_KEY }}
+          MOLIT_API_KEY: ${{ secrets.MOLIT_API_KEY }}
+        run: python complex_collector.py --force --sleep 0.2
+
+      - name: Compact SQLite database
+        run: python compact_database.py --skip-backup
+
+      - name: Rebuild static site
+        run: python build_static_site.py
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: public
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: refresh
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

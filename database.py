@@ -270,3 +270,17 @@ def get_summary():
             FROM apartment_trades
             """
         ).fetchone()
+
+
+def get_complex_summary():
+    init_db()
+    with get_connection() as conn:
+        return conn.execute(
+            """
+            SELECT
+                COUNT(*) AS total_complexes,
+                SUM(CASE WHEN household_count IS NOT NULL THEN 1 ELSE 0 END) AS complexes_with_households,
+                MAX(updated_at) AS latest_complex_update
+            FROM apartment_complexes
+            """
+        ).fetchone()

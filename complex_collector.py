@@ -6,12 +6,12 @@ import xml.etree.ElementTree as ET
 import requests
 
 from config import (
-    APT_BASIC_INFO_API_URLS,
+    APT_BASIC_INFO_API_URL,
     APT_INFO_API_KEY,
     APT_LIST_API_URL,
     REQUEST_TIMEOUT_SECONDS,
 )
-from database import init_db, upsert_complexes
+from database import get_connection, init_db, upsert_complexes
 
 
 RETRY_STATUS_CODES = {500, 502, 503, 504}
@@ -158,29 +158,30 @@ def fetch_seoul_complex_list(num_rows=1000):
 
 
 def fetch_basic_info(kapt_code):
-    errors = []
-    for url in APT_BASIC_INFO_API_URLS:
-        for key_name in ("serviceKey", "ServiceKey"):
-            params = {
-                key_name: APT_INFO_API_KEY,
-                "kaptCode": kapt_code,
-            }
-            try:
-                data = request_api(url, params)
-            except RuntimeError as error:
-                errors.append(f"{url.rsplit('/', 1)[-1]} {key_name}: {error}")
-                continue
-
-            items = extract_items(data)
-            if items:
-                return items[0]
-            body = extract_body(data)
-            if isinstance(body, dict) and any(key.startswith("kapt") or key == "kaptdaCnt" for key in body):
-                return body
-
-    if errors:
-        raise RuntimeError(" | ".join(errors[:4]))
+    params = {
+        "serviceKey": APT_INFO_API_KEY,
+        "kaptCode": kapt_code,
+    }
+    data = request_api(APT_BASIC_INFO_API_URL, params)
+    items = extract_items(data)
+    if items:
+        return items[0]
+    body = extract_body(data)
+    if isinstance(body, dict) and any(key.startswith("kapt") or key == "kaptdaCnt" for key in body):
+        return body
     return {}
+
+
+def get_existing_complex_status():
+    init_db()
+    with get_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT kapt_code, household_count
+            FROM apartment_complexes
+            """
+        ).fetchall()
+    return {row["kapt_code"]: row["household_count"] for row in rows}
 
 
 def value(data, key, default=""):
@@ -211,19 +212,51 @@ def parse_complex(list_item, basic_item=None):
     }
 
 
-def collect_complexes(limit=None, sleep_seconds=0.05, verbose=False, list_only=False):
+def collect_complexes(
+    limit=None,
+    sleep_seconds=0.05,
+    verbose=False,
+    list_only=False,
+    skip_existing=True,
+    retry_missing=False,
+):
     init_db()
     list_items = fetch_seoul_complex_list()
+    existing_complexes = get_existing_complex_status()
+    if retry_missing:
+        list_items = [
+            item
+            for item in list_items
+            if value(item, "kaptCode") not in existing_complexes
+            or existing_complexes.get(value(item, "kaptCode")) is None
+        ]
     if limit:
         list_items = list_items[:limit]
 
     saved = 0
     full_info_count = 0
     list_only_count = 0
+    skipped_count = 0
+    new_complex_count = 0
+    missing_retry_count = 0
     for index, list_item in enumerate(list_items, start=1):
         kapt_code = value(list_item, "kaptCode")
         kapt_name = value(list_item, "kaptName")
         print(f"[{index}/{len(list_items)}] {kapt_code} {kapt_name}")
+        is_new_complex = kapt_code not in existing_complexes
+        has_household_count = existing_complexes.get(kapt_code) is not None
+
+        if is_new_complex:
+            new_complex_count += 1
+            print("  new complex: requesting basic info.")
+        elif not has_household_count:
+            missing_retry_count += 1
+            print("  missing household_count: requesting basic info.")
+
+        if skip_existing and not retry_missing and has_household_count:
+            skipped_count += 1
+            print("  skipped: household_count already exists.")
+            continue
 
         if list_only:
             complex_row = parse_complex(list_item, {})
@@ -252,7 +285,10 @@ def collect_complexes(limit=None, sleep_seconds=0.05, verbose=False, list_only=F
         "Done. "
         f"Saved/updated rows: {saved}. "
         f"Full basic info: {full_info_count}. "
-        f"List only: {list_only_count}."
+        f"List only: {list_only_count}. "
+        f"Skipped existing: {skipped_count}. "
+        f"New complexes: {new_complex_count}. "
+        f"Missing retries: {missing_retry_count}."
     )
 
 
@@ -261,6 +297,16 @@ def parse_args():
     parser.add_argument("--limit", type=int, help="Small test limit")
     parser.add_argument("--sleep", type=float, default=0.05, help="Seconds to wait between API calls")
     parser.add_argument("--verbose", action="store_true", help="Print sample list data when basic info fails")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Refresh every complex, including rows that already have household_count",
+    )
+    parser.add_argument(
+        "--retry-missing",
+        action="store_true",
+        help="Only request new complexes and rows that do not have household_count yet",
+    )
     parser.add_argument(
         "--list-only",
         action="store_true",
@@ -276,4 +322,6 @@ if __name__ == "__main__":
         sleep_seconds=args.sleep,
         verbose=args.verbose,
         list_only=args.list_only,
+        skip_existing=not args.force,
+        retry_missing=args.retry_missing,
     )

@@ -165,11 +165,13 @@ def fetch_basic_info(kapt_code):
     data = request_api(APT_BASIC_INFO_API_URL, params)
     items = extract_items(data)
     if items:
-        return items[0]
+        item = items[0]
+        if isinstance(item, dict) and item:
+            return item
     body = extract_body(data)
-    if isinstance(body, dict) and any(key.startswith("kapt") or key == "kaptdaCnt" for key in body):
+    if isinstance(body, dict) and body:
         return body
-    return {}
+    raise RuntimeError("Basic info response did not contain usable apartment fields.")
 
 
 def get_existing_complex_status():
@@ -190,6 +192,77 @@ def value(data, key, default=""):
     return clean_text(data.get(key), default)
 
 
+def first_value(data, keys, default=""):
+    for key in keys:
+        found = value(data, key)
+        if found:
+            return found
+    return default
+
+
+HOUSEHOLD_COUNT_KEYS = (
+    "kaptdaCnt",
+    "householdCount",
+    "householdCnt",
+    "hshldCnt",
+    "hhldCnt",
+    "hhCnt",
+    "totHshldCnt",
+    "totalHouseholdCount",
+    "totalHouseholdCnt",
+    "totalHhldCnt",
+    "kaptHouseholdCnt",
+    "kaptHshldCnt",
+    "kaptTotalHouseholdCnt",
+    "kaptTotalHshldCnt",
+    "hoCnt",
+    "totalHoCnt",
+    "cntPa",
+    "\uc138\ub300\uc218",
+)
+
+DONG_COUNT_KEYS = (
+    "kaptDongCnt",
+    "dongCount",
+    "dongCnt",
+    "bldgCnt",
+    "buildingCount",
+    "\ub3d9\uc218",
+)
+
+USED_DATE_KEYS = (
+    "kaptUsedate",
+    "kaptUseDate",
+    "useDate",
+    "useAprDay",
+    "useApprovalDate",
+    "\uc0ac\uc6a9\uc2b9\uc778\uc77c",
+)
+
+ADDRESS_KEYS = (
+    "kaptAddr",
+    "addr",
+    "address",
+    "lnbrMnnm",
+    "\uc8fc\uc18c",
+)
+
+ROAD_ADDRESS_KEYS = (
+    "doroJuso",
+    "roadAddress",
+    "roadAddr",
+    "newPlatPlc",
+    "\ub3c4\ub85c\uba85\uc8fc\uc18c",
+)
+
+BJD_CODE_KEYS = (
+    "bjdCode",
+    "bjdongCode",
+    "bjdongCd",
+    "legalDongCode",
+)
+
+
 def parse_complex(list_item, basic_item=None):
     basic_item = basic_item or {}
     kapt_code = value(list_item, "kaptCode")
@@ -202,12 +275,12 @@ def parse_complex(list_item, basic_item=None):
         "as2": value(list_item, "as2"),
         "as3": value(list_item, "as3"),
         "as4": value(list_item, "as4"),
-        "bjd_code": value(basic_item, "bjdCode", value(list_item, "bjdCode")),
-        "household_count": to_int(basic_item.get("kaptdaCnt")) if isinstance(basic_item, dict) else None,
-        "dong_count": to_int(basic_item.get("kaptDongCnt")) if isinstance(basic_item, dict) else None,
-        "used_date": value(basic_item, "kaptUsedate"),
-        "address": value(basic_item, "kaptAddr"),
-        "road_address": value(basic_item, "doroJuso"),
+        "bjd_code": first_value(basic_item, BJD_CODE_KEYS, value(list_item, "bjdCode")),
+        "household_count": to_int(first_value(basic_item, HOUSEHOLD_COUNT_KEYS)),
+        "dong_count": to_int(first_value(basic_item, DONG_COUNT_KEYS)),
+        "used_date": first_value(basic_item, USED_DATE_KEYS),
+        "address": first_value(basic_item, ADDRESS_KEYS),
+        "road_address": first_value(basic_item, ROAD_ADDRESS_KEYS),
         "raw_xml": json.dumps(basic_item, ensure_ascii=False),
     }
 
@@ -267,6 +340,8 @@ def collect_complexes(
 
         try:
             basic_item = fetch_basic_info(kapt_code)
+            if not basic_item:
+                raise RuntimeError("Basic info response was empty.")
             complex_row = parse_complex(list_item, basic_item)
             saved += upsert_complexes([complex_row])
             full_info_count += 1

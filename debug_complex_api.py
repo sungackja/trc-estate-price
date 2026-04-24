@@ -1,9 +1,8 @@
 import json
-from urllib.parse import urlencode
 
 import requests
 
-from config import APT_BASIC_INFO_API_URLS, APT_INFO_API_KEY, REQUEST_TIMEOUT_SECONDS
+from config import APT_BASIC_INFO_API_URL, APT_INFO_API_KEY, REQUEST_TIMEOUT_SECONDS
 
 
 KAPT_CODE = "A10021295"
@@ -16,6 +15,11 @@ PARAM_VARIANTS = [
     {"kaptCode": KAPT_CODE, "_type": "json"},
     {"kaptCode": KAPT_CODE, "type": "json"},
     {"kaptCode": KAPT_CODE, "returnType": "json"},
+]
+
+ENDPOINTS = [
+    APT_BASIC_INFO_API_URL,
+    APT_BASIC_INFO_API_URL.replace("getAphusBassInfoV4", "getAphusDtlInfoV4"),
 ]
 
 
@@ -39,7 +43,7 @@ def main():
         print("APT_INFO_API_KEY is missing.")
         return
 
-    for endpoint in APT_BASIC_INFO_API_URLS:
+    for endpoint in ENDPOINTS:
         print("=" * 80)
         print(endpoint)
         for key_name in ("serviceKey", "ServiceKey"):

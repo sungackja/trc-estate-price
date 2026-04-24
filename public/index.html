@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>오늘 새로 포착된 서울 아파트 신고가</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #f3f4f6;
+            color: #111827;
+            font-family: Arial, "Malgun Gothic", sans-serif;
+        }
+
+        header {
+            background: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 28px 24px 18px;
+        }
+
+        .header-inner,
+        main {
+            margin: 0 auto;
+            max-width: 1120px;
+        }
+
+        .eyebrow {
+            color: #b40000;
+            font-size: 13px;
+            font-weight: 700;
+            margin: 0 0 8px;
+        }
+
+        h1 {
+            font-size: 32px;
+            line-height: 1.25;
+            margin: 0;
+        }
+
+        .submeta {
+            color: #4b5563;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 18px;
+            margin-top: 12px;
+        }
+
+        main {
+            padding: 22px 24px 40px;
+        }
+
+        .report-image {
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .report-image img {
+            display: block;
+            height: auto;
+            width: 100%;
+        }
+
+        .section-title {
+            align-items: baseline;
+            display: flex;
+            justify-content: space-between;
+            margin: 28px 0 12px;
+        }
+
+        h2 {
+            font-size: 20px;
+            margin: 0;
+        }
+
+        .count {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .filters {
+            align-items: end;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            display: grid;
+            gap: 12px;
+            grid-template-columns: 1.3fr repeat(4, 1fr);
+            padding: 14px;
+        }
+
+        label {
+            color: #4b5563;
+            display: grid;
+            font-size: 13px;
+            gap: 6px;
+        }
+
+        select,
+        input {
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font: inherit;
+            height: 38px;
+            padding: 0 10px;
+            width: 100%;
+        }
+
+        .table-wrap {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-top: 14px;
+            overflow: auto;
+        }
+
+        table {
+            border-collapse: collapse;
+            min-width: 960px;
+            width: 100%;
+        }
+
+        th,
+        td {
+            border-bottom: 1px solid #edf0f3;
+            font-size: 14px;
+            padding: 12px;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        th {
+            background: #f8fafc;
+            color: #475467;
+            font-size: 12px;
+        }
+
+        .apt,
+        .price,
+        .up {
+            font-weight: 700;
+        }
+
+        .up {
+            color: #d00000;
+        }
+
+        .empty {
+            color: #6b7280;
+            padding: 30px;
+            text-align: center;
+        }
+
+        @media (max-width: 860px) {
+            h1 {
+                font-size: 25px;
+            }
+
+            .filters {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .filters {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-inner">
+            <p class="eyebrow">공개/포착일 기준</p>
+            <h1>오늘 새로 포착된 서울 아파트 신고가</h1>
+            <div class="submeta">
+                <span>리포트 기준일: 2026-04-23</span>
+                <span>최근 업데이트 시간: 2026-04-24 20:10 KST</span>
+                <span>DB 범위: 2018-04-01 ~ 2026-04-23</span>
+                <span>누적 거래: 448,066건</span>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="report-image" aria-label="이미지형 리포트">
+            <img src="today-record-highs.svg" alt="오늘 새로 포착된 서울 아파트 신고가 이미지형 리포트">
+        </section>
+
+        <section>
+            <div class="section-title">
+                <h2>전체 신고가 리스트</h2>
+                <span class="count" id="resultCount">0건</span>
+            </div>
+
+            <div class="filters">
+                <label>
+                    구
+                    <select id="guFilter">
+                        <option value="">전체</option>
+                    </select>
+                </label>
+                <label>
+                    최소 면적
+                    <input id="minArea" type="number" min="0" step="1" placeholder="m2">
+                </label>
+                <label>
+                    최대 면적
+                    <input id="maxArea" type="number" min="0" step="1" placeholder="m2">
+                </label>
+                <label>
+                    최소 가격
+                    <input id="minPrice" type="number" min="0" step="0.1" placeholder="억">
+                </label>
+                <label>
+                    최대 가격
+                    <input id="maxPrice" type="number" min="0" step="0.1" placeholder="억">
+                </label>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>공개일</th>
+                            <th>계약일</th>
+                            <th>구</th>
+                            <th>동</th>
+                            <th>단지명</th>
+                            <th>전용</th>
+                            <th>세대수</th>
+                            <th>전고가</th>
+                            <th>거래금액</th>
+                            <th>증감</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rowsBody"></tbody>
+                </table>
+                <div class="empty" id="emptyState">조건에 맞는 신고가가 없습니다.</div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const rows = [];
+        const guFilter = document.getElementById("guFilter");
+        const minArea = document.getElementById("minArea");
+        const maxArea = document.getElementById("maxArea");
+        const minPrice = document.getElementById("minPrice");
+        const maxPrice = document.getElementById("maxPrice");
+        const rowsBody = document.getElementById("rowsBody");
+        const emptyState = document.getElementById("emptyState");
+        const resultCount = document.getElementById("resultCount");
+
+        function money(value) {
+            return Number(value).toLocaleString("ko-KR");
+        }
+
+        function price(value) {
+            return Number(value).toLocaleString("ko-KR", { maximumFractionDigits: 3 });
+        }
+
+        function fillDistricts() {
+            [...new Set(rows.map((row) => row.gu))].sort().forEach((gu) => {
+                const option = document.createElement("option");
+                option.value = gu;
+                option.textContent = gu;
+                guFilter.appendChild(option);
+            });
+        }
+
+        function passes(row) {
+            const gu = guFilter.value;
+            const minA = Number(minArea.value || 0);
+            const maxA = Number(maxArea.value || Infinity);
+            const minP = Number(minPrice.value || 0);
+            const maxP = Number(maxPrice.value || Infinity);
+            return (!gu || row.gu === gu)
+                && row.area >= minA
+                && row.area <= maxA
+                && row.priceEok >= minP
+                && row.priceEok <= maxP;
+        }
+
+        function render() {
+            const filtered = rows.filter(passes);
+            rowsBody.innerHTML = filtered.map((row) => `
+                <tr>
+                    <td>${row.seenDate || "-"}</td>
+                    <td>${row.dealDate}</td>
+                    <td>${row.gu}</td>
+                    <td>${row.dong}</td>
+                    <td class="apt">${row.apt}</td>
+                    <td>${Number(row.area).toFixed(2)} m2</td>
+                    <td>${row.households ? money(row.households) : "-"}</td>
+                    <td>${price(row.previousHighEok)}억</td>
+                    <td class="price">${price(row.priceEok)}억</td>
+                    <td class="up">▲${price(row.increaseEok)}억</td>
+                </tr>
+            `).join("");
+            emptyState.style.display = filtered.length ? "none" : "block";
+            resultCount.textContent = `${filtered.length.toLocaleString("ko-KR")}건`;
+        }
+
+        [guFilter, minArea, maxArea, minPrice, maxPrice].forEach((element) => {
+            element.addEventListener("input", render);
+        });
+
+        fillDistricts();
+        render();
+    </script>
+</body>
+</html>

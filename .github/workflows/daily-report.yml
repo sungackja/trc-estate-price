@@ -1,0 +1,121 @@
+name: Daily record-high report
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 06:00 KST is 21:00 UTC on the previous day.
+    - cron: "0 21 * * *"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Korean fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+
+      - name: Install Python packages
+        run: pip install -r requirements.txt
+
+      - name: Restore SQLite cache
+        uses: actions/cache@v4
+        with:
+          path: data/trades.sqlite3
+          key: trades-sqlite-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            trades-sqlite-${{ runner.os }}-
+
+      - name: Restore seed SQLite when cache is empty
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+
+          db_path = Path("data/trades.sqlite3")
+          seed_path = Path("trades-seed.zip")
+
+          if db_path.exists() and db_path.stat().st_size > 0:
+              print("SQLite DB restored from cache.")
+          elif seed_path.exists():
+              print("Restoring SQLite DB from trades-seed.zip.")
+              db_path.parent.mkdir(exist_ok=True)
+              with zipfile.ZipFile(seed_path) as archive:
+                  with archive.open("trades.sqlite3") as source:
+                      db_path.write_bytes(source.read())
+          else:
+              print("No SQLite cache or seed file found. Initial backfill will run.")
+          PY
+
+      - name: Initial 8-year collection when DB is empty
+        env:
+          MOLIT_API_KEY: ${{ secrets.MOLIT_API_KEY }}
+        run: |
+          python - <<'PY'
+          from database import init_db, get_summary
+          init_db()
+          summary = get_summary()
+          if summary["total_trades"]:
+              print("DB already has data. Skipping initial backfill.")
+          else:
+              import subprocess
+              subprocess.check_call(["python", "collector.py", "--mode", "backfill", "--sleep", "0.1"])
+          PY
+
+      - name: Collect apartment complex list when empty
+        env:
+          MOLIT_API_KEY: ${{ secrets.MOLIT_API_KEY }}
+          APT_INFO_API_KEY: ${{ secrets.APT_INFO_API_KEY }}
+        run: |
+          python - <<'PY'
+          import subprocess
+          from database import get_connection, init_db
+          init_db()
+          conn = get_connection()
+          count = conn.execute("SELECT COUNT(*) FROM apartment_complexes").fetchone()[0]
+          if count:
+              print(f"Complex table already has {count} rows. Skipping.")
+          else:
+              subprocess.check_call(["python", "complex_collector.py", "--list-only", "--sleep", "0.05"])
+          PY
+
+      - name: Refresh current and previous month
+        env:
+          MOLIT_API_KEY: ${{ secrets.MOLIT_API_KEY }}
+        run: python daily_update.py --sleep 0.1
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: public
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

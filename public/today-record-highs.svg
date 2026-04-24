@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="178" viewBox="0 0 900 178">
+<style>
+text { font-family: 'Malgun Gothic', 'Noto Sans CJK KR', Arial, sans-serif; }
+</style>
+<rect x="0" y="0" width="900" height="178" fill="white" stroke="white" stroke-width="1"/>
+<rect x="14" y="18" width="872" height="64" fill="#b40000" stroke="#b40000" stroke-width="1"/>
+<polygon points="42,36 172,20 184,58 54,74" fill="#001a9b"/>
+<text x="112" y="54" font-size="25" font-weight="700" fill="white" text-anchor="middle" dominant-baseline="middle">오늘의</text>
+<text x="460" y="53" font-size="42" font-weight="700" fill="white" text-anchor="middle" dominant-baseline="middle">서울 아파트 신고가 리스트</text>
+<rect x="14" y="84" width="872" height="24" fill="#f5f8fb" stroke="#d9d9d9" stroke-width="1"/>
+<text x="28" y="97" font-size="15" font-weight="400" fill="#111111" text-anchor="start" dominant-baseline="middle">2026년 04월 24일</text>
+<text x="864" y="97" font-size="15" font-weight="400" fill="#111111" text-anchor="end" dominant-baseline="middle">어디에도 없는 부동산 이야기</text>
+<rect x="14" y="112" width="724" height="28" fill="#d00000" stroke="#d00000" stroke-width="1"/>
+<rect x="14" y="112" width="72" height="28" fill="#d00000" stroke="white" stroke-width="1"/>
+<text x="50.0" y="127.0" font-size="16" font-weight="700" fill="white" text-anchor="middle" dominant-baseline="middle">구분</text>
+<rect x="86" y="112" width="78" height="28" fill="#d00000" stroke="white" stroke-width="1"/>
+<text x="125.0" y="127.0" font-size="16" font-weight="700" fill="white" text-anchor="middle" dominant-baseline="middle">전용(m2)</text>
+<rect x="164" y="112" width="230" height="28" fill="#d00000" stroke="white" stroke-width="1"/>
+<text x="279.0" y="127.0" font-size="16" font-weight="700" fill="white" text-anchor="middle" dominant-baseline="middle">단지명</text>
+<rect x="394" y="112" width="96" height="28" fill="#d00000" stroke="white" stroke-width="1"/>
+<text x="442.0" y="127.0" font-size="16" font-weight="700" fill="white" text-anchor="middle" dominant-baseline="middle">전고가</text>
+<rect x="490" y="112" width="96" height="28" fill="#d00000" stroke="white" stroke-width="1"/>
+<text x="538.0" y="127.0" font-size="16" font-weight="700" fill="white" text-anchor="middle" dominant-baseline="middle">거래금액</text>
+<rect x="586" y="112" width="70" height="28" fill="#d00000" stroke="white" stroke-width="1"/>
+<text x="621.0" y="127.0" font-size="16" font-weight="700" fill="white" text-anchor="middle" dominant-baseline="middle">세대수</text>
+<rect x="656" y="112" width="82" height="28" fill="#d00000" stroke="white" stroke-width="1"/>
+<text x="697.0" y="127.0" font-size="16" font-weight="700" fill="white" text-anchor="middle" dominant-baseline="middle">증감</text>
+<rect x="14" y="140" width="724" height="28" fill="white" stroke="#d9d9d9" stroke-width="1"/>
+<text x="376.0" y="155.0" font-size="16" font-weight="400" fill="#111111" text-anchor="middle" dominant-baseline="middle">2026-04-23 신규 공개 신고가가 아직 없습니다.</text>
+</svg>

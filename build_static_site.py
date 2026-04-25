@@ -4,39 +4,42 @@ from pathlib import Path
 
 from complexes import get_household_count_for_trade
 from database import get_complex_summary, get_summary, init_db
-from records import find_newly_seen_record_highs
+from records import find_newly_seen_record_highs, find_newly_seen_trades
 from report_image import REPORT_IMAGE_PATH, create_report_image, default_target_date
 
 
 PUBLIC_DIR = Path("public")
 
-PAGE_TITLE = "\uc624\ub298 \uc0c8\ub85c \ud3ec\ucc29\ub41c \uc11c\uc6b8 \uc544\ud30c\ud2b8 \uc2e0\uace0\uac00"
-EYEBROW = "\uacf5\uac1c/\ud3ec\ucc29\uc77c \uae30\uc900"
-REPORT_DATE = "\ub9ac\ud3ec\ud2b8 \uae30\uc900\uc77c"
-UPDATED_AT = "\ucd5c\uadfc \uc5c5\ub370\uc774\ud2b8 \uc2dc\uac04"
-DB_RANGE = "DB \ubc94\uc704"
-TOTAL_TRADES = "\ub204\uc801 \uac70\ub798"
-COMPLEX_INFO = "\ub2e8\uc9c0\uc815\ubcf4"
-IMAGE_LABEL = "\uc774\ubbf8\uc9c0\ud615 \ub9ac\ud3ec\ud2b8"
-LIST_TITLE = "\uc804\uccb4 \uc2e0\uace0\uac00 \ub9ac\uc2a4\ud2b8"
-DISTRICT = "\uad6c"
-ALL = "\uc804\uccb4"
-MIN_AREA = "\ucd5c\uc18c \uba74\uc801"
-MAX_AREA = "\ucd5c\ub300 \uba74\uc801"
-MIN_PRICE = "\ucd5c\uc18c \uac00\uaca9"
-MAX_PRICE = "\ucd5c\ub300 \uac00\uaca9"
-SEEN_DATE = "\uacf5\uac1c\uc77c"
-DEAL_DATE = "\uacc4\uc57d\uc77c"
-DONG = "\ub3d9"
-APT_NAME = "\ub2e8\uc9c0\uba85"
-AREA = "\uc804\uc6a9"
-HOUSEHOLDS = "\uc138\ub300\uc218"
-PREVIOUS_HIGH = "\uc804\uace0\uac00"
-DEAL_PRICE = "\uac70\ub798\uae08\uc561"
-INCREASE = "\uc99d\uac10"
-EMPTY = "\uc870\uac74\uc5d0 \ub9de\ub294 \uc2e0\uace0\uac00\uac00 \uc5c6\uc2b5\ub2c8\ub2e4."
-COUNT_SUFFIX = "\uac74"
-EOK = "\uc5b5"
+PAGE_TITLE = "오늘 새로 포착된 서울 아파트 거래"
+EYEBROW = "공개/포착일 기준"
+REPORT_DATE = "리포트 기준일"
+UPDATED_AT = "최근 업데이트 시간"
+DB_RANGE = "DB 범위"
+TOTAL_TRADES = "누적 거래"
+COMPLEX_INFO = "단지정보"
+IMAGE_LABEL = "이미지형 리포트"
+RECORD_LIST_TITLE = "전체 신고가 리스트"
+LATEST_LIST_TITLE = "오늘 업데이트된 실거래가 리스트"
+DISTRICT = "구"
+ALL = "전체"
+MIN_AREA = "최소 면적"
+MAX_AREA = "최대 면적"
+MIN_PRICE = "최소 가격"
+MAX_PRICE = "최대 가격"
+SEEN_DATE = "공개일"
+DEAL_DATE = "계약일"
+DONG = "동"
+APT_NAME = "단지명"
+AREA = "전용"
+HOUSEHOLDS = "세대수"
+FLOOR = "층"
+PREVIOUS_HIGH = "전고가"
+DEAL_PRICE = "거래금액"
+INCREASE = "증감"
+RECORD_EMPTY = "조건에 맞는 신고가가 없습니다."
+LATEST_EMPTY = "조건에 맞는 실거래가가 없습니다."
+COUNT_SUFFIX = "건"
+EOK = "억"
 
 
 def price_eok(value):
@@ -48,7 +51,7 @@ def format_update_time():
     return now.strftime("%Y-%m-%d %H:%M KST")
 
 
-def row_to_dict(row):
+def record_row_to_dict(row):
     previous_high = row["previous_high"] or 0
     increase = row["deal_amount"] - previous_high
     household_count = get_household_count_for_trade(row)
@@ -70,12 +73,30 @@ def row_to_dict(row):
     }
 
 
+def latest_trade_to_dict(row):
+    household_count = get_household_count_for_trade(row)
+    return {
+        "gu": row["gu_name"],
+        "dong": row["umd_nm"] or "",
+        "apt": row["apt_name"],
+        "area": row["exclusive_area"],
+        "dealDate": row["deal_date"],
+        "seenDate": row["first_seen_date"],
+        "price": row["deal_amount"],
+        "priceEok": price_eok(row["deal_amount"]),
+        "households": household_count,
+        "floor": row["floor"],
+    }
+
+
 def build_site(target_date=None):
     init_db()
     target_date = target_date or default_target_date()
     image_path = create_report_image(target_date=target_date)
-    rows = find_newly_seen_record_highs(limit=500, seen_date=target_date)
-    report_rows = [row_to_dict(row) for row in rows]
+    record_rows = find_newly_seen_record_highs(limit=1000, seen_date=target_date)
+    latest_trade_rows = find_newly_seen_trades(limit=5000, seen_date=target_date)
+    record_rows_json = json.dumps([record_row_to_dict(row) for row in record_rows], ensure_ascii=False)
+    latest_rows_json = json.dumps([latest_trade_to_dict(row) for row in latest_trade_rows], ensure_ascii=False)
     summary = get_summary()
     complex_summary = get_complex_summary()
 
@@ -88,7 +109,6 @@ def build_site(target_date=None):
     if total_complexes:
         complex_rate = round(complexes_with_households / total_complexes * 100, 1)
     update_time = format_update_time()
-    rows_json = json.dumps(report_rows, ensure_ascii=False)
 
     html = f"""<!doctype html>
 <html lang="ko">
@@ -127,10 +147,45 @@ def build_site(target_date=None):
             margin: 0 0 8px;
         }}
 
+        .title-row {{
+            align-items: start;
+            display: flex;
+            gap: 18px;
+            justify-content: space-between;
+        }}
+
         h1 {{
             font-size: 32px;
             line-height: 1.25;
             margin: 0;
+        }}
+
+        .view-buttons {{
+            background: #f8fafc;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            display: inline-flex;
+            flex: 0 0 auto;
+            overflow: hidden;
+            padding: 3px;
+        }}
+
+        .view-button {{
+            background: transparent;
+            border: 0;
+            border-radius: 6px;
+            color: #475467;
+            cursor: pointer;
+            font: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            height: 36px;
+            padding: 0 14px;
+        }}
+
+        .view-button.active {{
+            background: #b40000;
+            color: #ffffff;
         }}
 
         .submeta {{
@@ -145,10 +200,15 @@ def build_site(target_date=None):
             padding: 22px 24px 40px;
         }}
 
+        .tab-panel[hidden] {{
+            display: none;
+        }}
+
         .report-image {{
             background: #ffffff;
             border: 1px solid #d1d5db;
             border-radius: 8px;
+            margin-bottom: 28px;
             overflow: hidden;
         }}
 
@@ -162,7 +222,7 @@ def build_site(target_date=None):
             align-items: baseline;
             display: flex;
             justify-content: space-between;
-            margin: 28px 0 12px;
+            margin: 0 0 12px;
         }}
 
         h2 {{
@@ -249,6 +309,10 @@ def build_site(target_date=None):
         }}
 
         @media (max-width: 860px) {{
+            .title-row {{
+                display: grid;
+            }}
+
             h1 {{
                 font-size: 25px;
             }}
@@ -262,6 +326,14 @@ def build_site(target_date=None):
             .filters {{
                 grid-template-columns: 1fr;
             }}
+
+            .view-buttons {{
+                width: 100%;
+            }}
+
+            .view-button {{
+                flex: 1;
+            }}
         }}
     </style>
 </head>
@@ -269,7 +341,13 @@ def build_site(target_date=None):
     <header>
         <div class="header-inner">
             <p class="eyebrow">{EYEBROW}</p>
-            <h1>{PAGE_TITLE}</h1>
+            <div class="title-row">
+                <h1>{PAGE_TITLE}</h1>
+                <nav class="view-buttons" aria-label="목록 전환">
+                    <button class="view-button active" type="button" data-view="records">신고가 목록</button>
+                    <button class="view-button" type="button" data-view="latest">실거래가 목록</button>
+                </nav>
+            </div>
             <div class="submeta">
                 <span>{REPORT_DATE}: {target_date}</span>
                 <span>{UPDATED_AT}: {update_time}</span>
@@ -281,41 +359,22 @@ def build_site(target_date=None):
     </header>
 
     <main>
-        <section class="report-image" aria-label="{IMAGE_LABEL}">
-            <img src="{REPORT_IMAGE_PATH.name}" alt="{PAGE_TITLE} {IMAGE_LABEL}">
-        </section>
+        <section class="tab-panel" id="recordsPanel">
+            <section class="report-image" aria-label="{IMAGE_LABEL}">
+                <img src="{REPORT_IMAGE_PATH.name}" alt="{RECORD_LIST_TITLE} {IMAGE_LABEL}">
+            </section>
 
-        <section>
             <div class="section-title">
-                <h2>{LIST_TITLE}</h2>
-                <span class="count" id="resultCount">0{COUNT_SUFFIX}</span>
+                <h2>{RECORD_LIST_TITLE}</h2>
+                <span class="count" id="recordCount">0{COUNT_SUFFIX}</span>
             </div>
-
-            <div class="filters">
-                <label>
-                    {DISTRICT}
-                    <select id="guFilter">
-                        <option value="">{ALL}</option>
-                    </select>
-                </label>
-                <label>
-                    {MIN_AREA}
-                    <input id="minArea" type="number" min="0" step="1" placeholder="m2">
-                </label>
-                <label>
-                    {MAX_AREA}
-                    <input id="maxArea" type="number" min="0" step="1" placeholder="m2">
-                </label>
-                <label>
-                    {MIN_PRICE}
-                    <input id="minPrice" type="number" min="0" step="0.1" placeholder="{EOK}">
-                </label>
-                <label>
-                    {MAX_PRICE}
-                    <input id="maxPrice" type="number" min="0" step="0.1" placeholder="{EOK}">
-                </label>
+            <div class="filters" id="recordFilters">
+                <label>{DISTRICT}<select id="recordGu"><option value="">{ALL}</option></select></label>
+                <label>{MIN_AREA}<input id="recordMinArea" type="number" min="0" step="1" placeholder="m2"></label>
+                <label>{MAX_AREA}<input id="recordMaxArea" type="number" min="0" step="1" placeholder="m2"></label>
+                <label>{MIN_PRICE}<input id="recordMinPrice" type="number" min="0" step="0.1" placeholder="{EOK}"></label>
+                <label>{MAX_PRICE}<input id="recordMaxPrice" type="number" min="0" step="0.1" placeholder="{EOK}"></label>
             </div>
-
             <div class="table-wrap">
                 <table>
                     <thead>
@@ -332,23 +391,49 @@ def build_site(target_date=None):
                             <th>{INCREASE}</th>
                         </tr>
                     </thead>
-                    <tbody id="rowsBody"></tbody>
+                    <tbody id="recordRows"></tbody>
                 </table>
-                <div class="empty" id="emptyState">{EMPTY}</div>
+                <div class="empty" id="recordEmpty">{RECORD_EMPTY}</div>
+            </div>
+        </section>
+
+        <section class="tab-panel" id="latestPanel" hidden>
+            <div class="section-title">
+                <h2>{LATEST_LIST_TITLE}</h2>
+                <span class="count" id="latestCount">0{COUNT_SUFFIX}</span>
+            </div>
+            <div class="filters" id="latestFilters">
+                <label>{DISTRICT}<select id="latestGu"><option value="">{ALL}</option></select></label>
+                <label>{MIN_AREA}<input id="latestMinArea" type="number" min="0" step="1" placeholder="m2"></label>
+                <label>{MAX_AREA}<input id="latestMaxArea" type="number" min="0" step="1" placeholder="m2"></label>
+                <label>{MIN_PRICE}<input id="latestMinPrice" type="number" min="0" step="0.1" placeholder="{EOK}"></label>
+                <label>{MAX_PRICE}<input id="latestMaxPrice" type="number" min="0" step="0.1" placeholder="{EOK}"></label>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>{SEEN_DATE}</th>
+                            <th>{DEAL_DATE}</th>
+                            <th>{DISTRICT}</th>
+                            <th>{DONG}</th>
+                            <th>{APT_NAME}</th>
+                            <th>{AREA}</th>
+                            <th>{FLOOR}</th>
+                            <th>{HOUSEHOLDS}</th>
+                            <th>{DEAL_PRICE}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="latestRows"></tbody>
+                </table>
+                <div class="empty" id="latestEmpty">{LATEST_EMPTY}</div>
             </div>
         </section>
     </main>
 
     <script>
-        const rows = {rows_json};
-        const guFilter = document.getElementById("guFilter");
-        const minArea = document.getElementById("minArea");
-        const maxArea = document.getElementById("maxArea");
-        const minPrice = document.getElementById("minPrice");
-        const maxPrice = document.getElementById("maxPrice");
-        const rowsBody = document.getElementById("rowsBody");
-        const emptyState = document.getElementById("emptyState");
-        const resultCount = document.getElementById("resultCount");
+        const recordRows = {record_rows_json};
+        const latestRows = {latest_rows_json};
 
         function money(value) {{
             return Number(value).toLocaleString("ko-KR");
@@ -358,31 +443,62 @@ def build_site(target_date=None):
             return Number(value).toLocaleString("ko-KR", {{ maximumFractionDigits: 3 }});
         }}
 
-        function fillDistricts() {{
-            [...new Set(rows.map((row) => row.gu))].sort().forEach((gu) => {{
+        function setupTable(config) {{
+            const guFilter = document.getElementById(config.gu);
+            const minArea = document.getElementById(config.minArea);
+            const maxArea = document.getElementById(config.maxArea);
+            const minPrice = document.getElementById(config.minPrice);
+            const maxPrice = document.getElementById(config.maxPrice);
+            const body = document.getElementById(config.body);
+            const empty = document.getElementById(config.empty);
+            const count = document.getElementById(config.count);
+
+            [...new Set(config.rows.map((row) => row.gu))].sort().forEach((gu) => {{
                 const option = document.createElement("option");
                 option.value = gu;
                 option.textContent = gu;
                 guFilter.appendChild(option);
             }});
+
+            function passes(row) {{
+                const gu = guFilter.value;
+                const minA = Number(minArea.value || 0);
+                const maxA = Number(maxArea.value || Infinity);
+                const minP = Number(minPrice.value || 0);
+                const maxP = Number(maxPrice.value || Infinity);
+                return (!gu || row.gu === gu)
+                    && row.area >= minA
+                    && row.area <= maxA
+                    && row.priceEok >= minP
+                    && row.priceEok <= maxP;
+            }}
+
+            function render() {{
+                const filtered = config.rows.filter(passes);
+                body.innerHTML = filtered.map(config.renderRow).join("");
+                empty.style.display = filtered.length ? "none" : "block";
+                count.textContent = `${{filtered.length.toLocaleString("ko-KR")}}{COUNT_SUFFIX}`;
+            }}
+
+            [guFilter, minArea, maxArea, minPrice, maxPrice].forEach((element) => {{
+                element.addEventListener("input", render);
+            }});
+
+            render();
+            return render;
         }}
 
-        function passes(row) {{
-            const gu = guFilter.value;
-            const minA = Number(minArea.value || 0);
-            const maxA = Number(maxArea.value || Infinity);
-            const minP = Number(minPrice.value || 0);
-            const maxP = Number(maxPrice.value || Infinity);
-            return (!gu || row.gu === gu)
-                && row.area >= minA
-                && row.area <= maxA
-                && row.priceEok >= minP
-                && row.priceEok <= maxP;
-        }}
-
-        function render() {{
-            const filtered = rows.filter(passes);
-            rowsBody.innerHTML = filtered.map((row) => `
+        setupTable({{
+            rows: recordRows,
+            gu: "recordGu",
+            minArea: "recordMinArea",
+            maxArea: "recordMaxArea",
+            minPrice: "recordMinPrice",
+            maxPrice: "recordMaxPrice",
+            body: "recordRows",
+            empty: "recordEmpty",
+            count: "recordCount",
+            renderRow: (row) => `
                 <tr>
                     <td>${{row.seenDate || "-"}}</td>
                     <td>${{row.dealDate}}</td>
@@ -395,17 +511,46 @@ def build_site(target_date=None):
                     <td class="price">${{price(row.priceEok)}}{EOK}</td>
                     <td class="up">▲${{price(row.increaseEok)}}{EOK}</td>
                 </tr>
-            `).join("");
-            emptyState.style.display = filtered.length ? "none" : "block";
-            resultCount.textContent = `${{filtered.length.toLocaleString("ko-KR")}}{COUNT_SUFFIX}`;
-        }}
-
-        [guFilter, minArea, maxArea, minPrice, maxPrice].forEach((element) => {{
-            element.addEventListener("input", render);
+            `,
         }});
 
-        fillDistricts();
-        render();
+        setupTable({{
+            rows: latestRows,
+            gu: "latestGu",
+            minArea: "latestMinArea",
+            maxArea: "latestMaxArea",
+            minPrice: "latestMinPrice",
+            maxPrice: "latestMaxPrice",
+            body: "latestRows",
+            empty: "latestEmpty",
+            count: "latestCount",
+            renderRow: (row) => `
+                <tr>
+                    <td>${{row.seenDate || "-"}}</td>
+                    <td>${{row.dealDate}}</td>
+                    <td>${{row.gu}}</td>
+                    <td>${{row.dong}}</td>
+                    <td class="apt">${{row.apt}}</td>
+                    <td>${{Number(row.area).toFixed(2)}} m2</td>
+                    <td>${{row.floor ?? "-"}}</td>
+                    <td>${{row.households ? money(row.households) : "-"}}</td>
+                    <td class="price">${{price(row.priceEok)}}{EOK}</td>
+                </tr>
+            `,
+        }});
+
+        const buttons = document.querySelectorAll(".view-button");
+        const recordsPanel = document.getElementById("recordsPanel");
+        const latestPanel = document.getElementById("latestPanel");
+
+        buttons.forEach((button) => {{
+            button.addEventListener("click", () => {{
+                const view = button.dataset.view;
+                buttons.forEach((item) => item.classList.toggle("active", item === button));
+                recordsPanel.hidden = view !== "records";
+                latestPanel.hidden = view !== "latest";
+            }});
+        }});
     </script>
 </body>
 </html>

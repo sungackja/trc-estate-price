@@ -66,13 +66,18 @@ def find_newly_seen_record_highs(limit=100, seen_date=None, gu_code=None):
     init_db()
 
     filters = ["t.is_backfill = 0", "t.first_seen_date = :seen_date"]
-    params = {"limit": limit, "seen_date": seen_date}
+    params = {"seen_date": seen_date}
 
     if gu_code:
         filters.append("t.sgg_cd = :gu_code")
         params["gu_code"] = gu_code
 
     where_sql = " AND ".join(filters)
+    limit_sql = ""
+    if limit is not None:
+        limit_sql = "LIMIT :limit"
+        params["limit"] = limit
+
     query = f"""
         WITH candidates AS (
             SELECT
@@ -91,7 +96,34 @@ def find_newly_seen_record_highs(limit=100, seen_date=None, gu_code=None):
         WHERE previous_high IS NOT NULL
           AND deal_amount > previous_high
         ORDER BY deal_amount DESC, deal_date DESC
-        LIMIT :limit
+        {limit_sql}
+    """
+
+    with get_connection() as conn:
+        return conn.execute(query, params).fetchall()
+
+
+def find_newly_seen_trades(limit=1000, seen_date=None, gu_code=None):
+    init_db()
+
+    filters = ["is_backfill = 0", "first_seen_date = :seen_date"]
+    params = {"seen_date": seen_date}
+
+    if gu_code:
+        filters.append("sgg_cd = :gu_code")
+        params["gu_code"] = gu_code
+
+    limit_sql = ""
+    if limit is not None:
+        limit_sql = "LIMIT :limit"
+        params["limit"] = limit
+
+    query = f"""
+        SELECT *
+        FROM apartment_trades
+        WHERE {" AND ".join(filters)}
+        ORDER BY deal_amount DESC, deal_date DESC, gu_name ASC, apt_name ASC
+        {limit_sql}
     """
 
     with get_connection() as conn:

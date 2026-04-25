@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>오늘 새로 포착된 서울 아파트 신고가</title>
+    <title>오늘 새로 포착된 서울 아파트 거래</title>
     <style>
         * {
             box-sizing: border-box;
@@ -35,10 +35,45 @@
             margin: 0 0 8px;
         }
 
+        .title-row {
+            align-items: start;
+            display: flex;
+            gap: 18px;
+            justify-content: space-between;
+        }
+
         h1 {
             font-size: 32px;
             line-height: 1.25;
             margin: 0;
+        }
+
+        .view-buttons {
+            background: #f8fafc;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            display: inline-flex;
+            flex: 0 0 auto;
+            overflow: hidden;
+            padding: 3px;
+        }
+
+        .view-button {
+            background: transparent;
+            border: 0;
+            border-radius: 6px;
+            color: #475467;
+            cursor: pointer;
+            font: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            height: 36px;
+            padding: 0 14px;
+        }
+
+        .view-button.active {
+            background: #b40000;
+            color: #ffffff;
         }
 
         .submeta {
@@ -53,10 +88,15 @@
             padding: 22px 24px 40px;
         }
 
+        .tab-panel[hidden] {
+            display: none;
+        }
+
         .report-image {
             background: #ffffff;
             border: 1px solid #d1d5db;
             border-radius: 8px;
+            margin-bottom: 28px;
             overflow: hidden;
         }
 
@@ -70,7 +110,7 @@
             align-items: baseline;
             display: flex;
             justify-content: space-between;
-            margin: 28px 0 12px;
+            margin: 0 0 12px;
         }
 
         h2 {
@@ -157,6 +197,10 @@
         }
 
         @media (max-width: 860px) {
+            .title-row {
+                display: grid;
+            }
+
             h1 {
                 font-size: 25px;
             }
@@ -170,6 +214,14 @@
             .filters {
                 grid-template-columns: 1fr;
             }
+
+            .view-buttons {
+                width: 100%;
+            }
+
+            .view-button {
+                flex: 1;
+            }
         }
     </style>
 </head>
@@ -177,10 +229,16 @@
     <header>
         <div class="header-inner">
             <p class="eyebrow">공개/포착일 기준</p>
-            <h1>오늘 새로 포착된 서울 아파트 신고가</h1>
+            <div class="title-row">
+                <h1>오늘 새로 포착된 서울 아파트 거래</h1>
+                <nav class="view-buttons" aria-label="목록 전환">
+                    <button class="view-button active" type="button" data-view="records">신고가 목록</button>
+                    <button class="view-button" type="button" data-view="latest">실거래가 목록</button>
+                </nav>
+            </div>
             <div class="submeta">
                 <span>리포트 기준일: 2026-04-24</span>
-                <span>최근 업데이트 시간: 2026-04-25 10:53 KST</span>
+                <span>최근 업데이트 시간: 2026-04-25 19:29 KST</span>
                 <span>DB 범위: 2018-04-01 ~ 2026-04-23</span>
                 <span>누적 거래: 448,066건</span>
                 <span>단지정보: 3/3,362건 (0.1%)</span>
@@ -189,41 +247,22 @@
     </header>
 
     <main>
-        <section class="report-image" aria-label="이미지형 리포트">
-            <img src="today-record-highs.svg" alt="오늘 새로 포착된 서울 아파트 신고가 이미지형 리포트">
-        </section>
+        <section class="tab-panel" id="recordsPanel">
+            <section class="report-image" aria-label="이미지형 리포트">
+                <img src="today-record-highs.svg" alt="전체 신고가 리스트 이미지형 리포트">
+            </section>
 
-        <section>
             <div class="section-title">
                 <h2>전체 신고가 리스트</h2>
-                <span class="count" id="resultCount">0건</span>
+                <span class="count" id="recordCount">0건</span>
             </div>
-
-            <div class="filters">
-                <label>
-                    구
-                    <select id="guFilter">
-                        <option value="">전체</option>
-                    </select>
-                </label>
-                <label>
-                    최소 면적
-                    <input id="minArea" type="number" min="0" step="1" placeholder="m2">
-                </label>
-                <label>
-                    최대 면적
-                    <input id="maxArea" type="number" min="0" step="1" placeholder="m2">
-                </label>
-                <label>
-                    최소 가격
-                    <input id="minPrice" type="number" min="0" step="0.1" placeholder="억">
-                </label>
-                <label>
-                    최대 가격
-                    <input id="maxPrice" type="number" min="0" step="0.1" placeholder="억">
-                </label>
+            <div class="filters" id="recordFilters">
+                <label>구<select id="recordGu"><option value="">전체</option></select></label>
+                <label>최소 면적<input id="recordMinArea" type="number" min="0" step="1" placeholder="m2"></label>
+                <label>최대 면적<input id="recordMaxArea" type="number" min="0" step="1" placeholder="m2"></label>
+                <label>최소 가격<input id="recordMinPrice" type="number" min="0" step="0.1" placeholder="억"></label>
+                <label>최대 가격<input id="recordMaxPrice" type="number" min="0" step="0.1" placeholder="억"></label>
             </div>
-
             <div class="table-wrap">
                 <table>
                     <thead>
@@ -240,23 +279,49 @@
                             <th>증감</th>
                         </tr>
                     </thead>
-                    <tbody id="rowsBody"></tbody>
+                    <tbody id="recordRows"></tbody>
                 </table>
-                <div class="empty" id="emptyState">조건에 맞는 신고가가 없습니다.</div>
+                <div class="empty" id="recordEmpty">조건에 맞는 신고가가 없습니다.</div>
+            </div>
+        </section>
+
+        <section class="tab-panel" id="latestPanel" hidden>
+            <div class="section-title">
+                <h2>오늘 업데이트된 실거래가 리스트</h2>
+                <span class="count" id="latestCount">0건</span>
+            </div>
+            <div class="filters" id="latestFilters">
+                <label>구<select id="latestGu"><option value="">전체</option></select></label>
+                <label>최소 면적<input id="latestMinArea" type="number" min="0" step="1" placeholder="m2"></label>
+                <label>최대 면적<input id="latestMaxArea" type="number" min="0" step="1" placeholder="m2"></label>
+                <label>최소 가격<input id="latestMinPrice" type="number" min="0" step="0.1" placeholder="억"></label>
+                <label>최대 가격<input id="latestMaxPrice" type="number" min="0" step="0.1" placeholder="억"></label>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>공개일</th>
+                            <th>계약일</th>
+                            <th>구</th>
+                            <th>동</th>
+                            <th>단지명</th>
+                            <th>전용</th>
+                            <th>층</th>
+                            <th>세대수</th>
+                            <th>거래금액</th>
+                        </tr>
+                    </thead>
+                    <tbody id="latestRows"></tbody>
+                </table>
+                <div class="empty" id="latestEmpty">조건에 맞는 실거래가가 없습니다.</div>
             </div>
         </section>
     </main>
 
     <script>
-        const rows = [];
-        const guFilter = document.getElementById("guFilter");
-        const minArea = document.getElementById("minArea");
-        const maxArea = document.getElementById("maxArea");
-        const minPrice = document.getElementById("minPrice");
-        const maxPrice = document.getElementById("maxPrice");
-        const rowsBody = document.getElementById("rowsBody");
-        const emptyState = document.getElementById("emptyState");
-        const resultCount = document.getElementById("resultCount");
+        const recordRows = [];
+        const latestRows = [];
 
         function money(value) {
             return Number(value).toLocaleString("ko-KR");
@@ -266,31 +331,62 @@
             return Number(value).toLocaleString("ko-KR", { maximumFractionDigits: 3 });
         }
 
-        function fillDistricts() {
-            [...new Set(rows.map((row) => row.gu))].sort().forEach((gu) => {
+        function setupTable(config) {
+            const guFilter = document.getElementById(config.gu);
+            const minArea = document.getElementById(config.minArea);
+            const maxArea = document.getElementById(config.maxArea);
+            const minPrice = document.getElementById(config.minPrice);
+            const maxPrice = document.getElementById(config.maxPrice);
+            const body = document.getElementById(config.body);
+            const empty = document.getElementById(config.empty);
+            const count = document.getElementById(config.count);
+
+            [...new Set(config.rows.map((row) => row.gu))].sort().forEach((gu) => {
                 const option = document.createElement("option");
                 option.value = gu;
                 option.textContent = gu;
                 guFilter.appendChild(option);
             });
+
+            function passes(row) {
+                const gu = guFilter.value;
+                const minA = Number(minArea.value || 0);
+                const maxA = Number(maxArea.value || Infinity);
+                const minP = Number(minPrice.value || 0);
+                const maxP = Number(maxPrice.value || Infinity);
+                return (!gu || row.gu === gu)
+                    && row.area >= minA
+                    && row.area <= maxA
+                    && row.priceEok >= minP
+                    && row.priceEok <= maxP;
+            }
+
+            function render() {
+                const filtered = config.rows.filter(passes);
+                body.innerHTML = filtered.map(config.renderRow).join("");
+                empty.style.display = filtered.length ? "none" : "block";
+                count.textContent = `${filtered.length.toLocaleString("ko-KR")}건`;
+            }
+
+            [guFilter, minArea, maxArea, minPrice, maxPrice].forEach((element) => {
+                element.addEventListener("input", render);
+            });
+
+            render();
+            return render;
         }
 
-        function passes(row) {
-            const gu = guFilter.value;
-            const minA = Number(minArea.value || 0);
-            const maxA = Number(maxArea.value || Infinity);
-            const minP = Number(minPrice.value || 0);
-            const maxP = Number(maxPrice.value || Infinity);
-            return (!gu || row.gu === gu)
-                && row.area >= minA
-                && row.area <= maxA
-                && row.priceEok >= minP
-                && row.priceEok <= maxP;
-        }
-
-        function render() {
-            const filtered = rows.filter(passes);
-            rowsBody.innerHTML = filtered.map((row) => `
+        setupTable({
+            rows: recordRows,
+            gu: "recordGu",
+            minArea: "recordMinArea",
+            maxArea: "recordMaxArea",
+            minPrice: "recordMinPrice",
+            maxPrice: "recordMaxPrice",
+            body: "recordRows",
+            empty: "recordEmpty",
+            count: "recordCount",
+            renderRow: (row) => `
                 <tr>
                     <td>${row.seenDate || "-"}</td>
                     <td>${row.dealDate}</td>
@@ -303,17 +399,46 @@
                     <td class="price">${price(row.priceEok)}억</td>
                     <td class="up">▲${price(row.increaseEok)}억</td>
                 </tr>
-            `).join("");
-            emptyState.style.display = filtered.length ? "none" : "block";
-            resultCount.textContent = `${filtered.length.toLocaleString("ko-KR")}건`;
-        }
-
-        [guFilter, minArea, maxArea, minPrice, maxPrice].forEach((element) => {
-            element.addEventListener("input", render);
+            `,
         });
 
-        fillDistricts();
-        render();
+        setupTable({
+            rows: latestRows,
+            gu: "latestGu",
+            minArea: "latestMinArea",
+            maxArea: "latestMaxArea",
+            minPrice: "latestMinPrice",
+            maxPrice: "latestMaxPrice",
+            body: "latestRows",
+            empty: "latestEmpty",
+            count: "latestCount",
+            renderRow: (row) => `
+                <tr>
+                    <td>${row.seenDate || "-"}</td>
+                    <td>${row.dealDate}</td>
+                    <td>${row.gu}</td>
+                    <td>${row.dong}</td>
+                    <td class="apt">${row.apt}</td>
+                    <td>${Number(row.area).toFixed(2)} m2</td>
+                    <td>${row.floor ?? "-"}</td>
+                    <td>${row.households ? money(row.households) : "-"}</td>
+                    <td class="price">${price(row.priceEok)}억</td>
+                </tr>
+            `,
+        });
+
+        const buttons = document.querySelectorAll(".view-button");
+        const recordsPanel = document.getElementById("recordsPanel");
+        const latestPanel = document.getElementById("latestPanel");
+
+        buttons.forEach((button) => {
+            button.addEventListener("click", () => {
+                const view = button.dataset.view;
+                buttons.forEach((item) => item.classList.toggle("active", item === button));
+                recordsPanel.hidden = view !== "records";
+                latestPanel.hidden = view !== "latest";
+            });
+        });
     </script>
 </body>
 </html>

@@ -158,6 +158,22 @@ jobs:
         if: inputs.mode == 'monthly'
         run: python build_static_site.py
 
+      - name: Package SQLite database snapshot
+        run: |
+          if [ -f data/trades.sqlite3 ]; then
+            zip -j trades-sqlite-snapshot.zip data/trades.sqlite3
+          else
+            echo "No SQLite database found to package."
+          fi
+
+      - name: Upload SQLite database snapshot
+        if: hashFiles('trades-sqlite-snapshot.zip') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: trades-sqlite-snapshot
+          path: trades-sqlite-snapshot.zip
+          retention-days: 7
+
       - name: Deploy generated public directory to Vercel
         if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
         run: |

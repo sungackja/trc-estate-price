@@ -122,12 +122,65 @@ def find_newly_seen_trades(limit=1000, seen_date=None, gu_code=None):
         SELECT *
         FROM apartment_trades
         WHERE {" AND ".join(filters)}
-        ORDER BY deal_amount DESC, deal_date DESC, gu_name ASC, apt_name ASC
+        ORDER BY gu_name ASC, umd_nm ASC, apt_name ASC, deal_amount DESC, deal_date DESC
         {limit_sql}
     """
 
     with get_connection() as conn:
         return conn.execute(query, params).fetchall()
+
+
+def latest_newly_seen_record_high_date(max_seen_date=None):
+    init_db()
+
+    filters = ["t.is_backfill = 0", "t.first_seen_date IS NOT NULL"]
+    params = {}
+    if max_seen_date:
+        filters.append("t.first_seen_date <= :max_seen_date")
+        params["max_seen_date"] = max_seen_date
+
+    query = f"""
+        WITH candidates AS (
+            SELECT
+                t.*,
+                (
+                    SELECT MAX(p.deal_amount)
+                    FROM apartment_trades p
+                    WHERE {GROUP_MATCH_SQL}
+                      AND p.id <> t.id
+                ) AS previous_high
+            FROM apartment_trades t
+            WHERE {" AND ".join(filters)}
+        )
+        SELECT MAX(first_seen_date) AS latest_seen_date
+        FROM candidates
+        WHERE previous_high IS NOT NULL
+          AND deal_amount > previous_high
+    """
+
+    with get_connection() as conn:
+        row = conn.execute(query, params).fetchone()
+        return row["latest_seen_date"] if row else None
+
+
+def latest_newly_seen_trade_date(max_seen_date=None):
+    init_db()
+
+    filters = ["is_backfill = 0", "first_seen_date IS NOT NULL"]
+    params = {}
+    if max_seen_date:
+        filters.append("first_seen_date <= :max_seen_date")
+        params["max_seen_date"] = max_seen_date
+
+    query = f"""
+        SELECT MAX(first_seen_date) AS latest_seen_date
+        FROM apartment_trades
+        WHERE {" AND ".join(filters)}
+    """
+
+    with get_connection() as conn:
+        row = conn.execute(query, params).fetchone()
+        return row["latest_seen_date"] if row else None
 
 
 def latest_record_high_date():

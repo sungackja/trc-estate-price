@@ -4,7 +4,12 @@ from pathlib import Path
 
 from complexes import get_household_count_for_trade
 from database import get_complex_summary, get_summary, init_db
-from records import find_newly_seen_record_highs, find_newly_seen_trades
+from records import (
+    find_newly_seen_record_highs,
+    find_newly_seen_trades,
+    latest_newly_seen_record_high_date,
+    latest_newly_seen_trade_date,
+)
 from report_image import REPORT_IMAGE_PATH, create_report_image, default_target_date
 
 
@@ -12,7 +17,9 @@ PUBLIC_DIR = Path("public")
 
 PAGE_TITLE = "오늘 새로 포착된 서울 아파트 거래"
 EYEBROW = "공개/포착일 기준"
-REPORT_DATE = "리포트 기준일"
+REQUESTED_DATE = "조회 기준일"
+RECORD_REPORT_DATE = "신고가 표시일"
+LATEST_REPORT_DATE = "실거래가 표시일"
 UPDATED_AT = "최근 업데이트 시간"
 DB_RANGE = "DB 범위"
 TOTAL_TRADES = "누적 거래"
@@ -92,9 +99,11 @@ def latest_trade_to_dict(row):
 def build_site(target_date=None):
     init_db()
     target_date = target_date or default_target_date()
-    image_path = create_report_image(target_date=target_date)
-    record_rows = find_newly_seen_record_highs(limit=1000, seen_date=target_date)
-    latest_trade_rows = find_newly_seen_trades(limit=5000, seen_date=target_date)
+    record_report_date = latest_newly_seen_record_high_date(max_seen_date=target_date) or target_date
+    latest_report_date = latest_newly_seen_trade_date(max_seen_date=target_date) or target_date
+    image_path = create_report_image(target_date=record_report_date)
+    record_rows = find_newly_seen_record_highs(limit=1000, seen_date=record_report_date)
+    latest_trade_rows = find_newly_seen_trades(limit=5000, seen_date=latest_report_date)
     record_rows_json = json.dumps([record_row_to_dict(row) for row in record_rows], ensure_ascii=False)
     latest_rows_json = json.dumps([latest_trade_to_dict(row) for row in latest_trade_rows], ensure_ascii=False)
     summary = get_summary()
@@ -349,7 +358,9 @@ def build_site(target_date=None):
                 </nav>
             </div>
             <div class="submeta">
-                <span>{REPORT_DATE}: {target_date}</span>
+                <span>{REQUESTED_DATE}: {target_date}</span>
+                <span>{RECORD_REPORT_DATE}: {record_report_date}</span>
+                <span>{LATEST_REPORT_DATE}: {latest_report_date}</span>
                 <span>{UPDATED_AT}: {update_time}</span>
                 <span>{DB_RANGE}: {first_date} ~ {last_date}</span>
                 <span>{TOTAL_TRADES}: {total_trades:,}{COUNT_SUFFIX}</span>

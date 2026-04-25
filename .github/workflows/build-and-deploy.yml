@@ -161,9 +161,12 @@ jobs:
       - name: Deploy generated public directory to Vercel
         if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
         run: |
-          mkdir -p .vercel
+          rm -rf .vercel
+          mkdir -p .vercel/output/static
           printf '{"orgId":"%s","projectId":"%s"}' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
-          npx vercel@latest deploy --prod --yes --token "$VERCEL_TOKEN"
+          printf '{"version":3}' > .vercel/output/config.json
+          cp -R public/. .vercel/output/static/
+          npx vercel@latest deploy --prebuilt --prod --yes --token "$VERCEL_TOKEN"
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

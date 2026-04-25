@@ -17,6 +17,10 @@ from database import get_connection, init_db, upsert_complexes
 RETRY_STATUS_CODES = {500, 502, 503, 504}
 
 
+class ApiQuotaExceeded(RuntimeError):
+    pass
+
+
 def clean_text(value, default=""):
     if value is None:
         return default
@@ -101,6 +105,10 @@ def request_api(url, params, retries=2, retry_sleep=1.0):
             "Check that this key is approved for the V3 apartment list/basic-info APIs "
             "on data.go.kr."
         )
+
+    if response.status_code == 429:
+        body = response.text[:300].replace("\n", " ")
+        raise ApiQuotaExceeded(f"API quota exceeded with HTTP 429. Body: {body}")
 
     if response.status_code != 200:
         body = response.text[:300].replace("\n", " ")
@@ -319,6 +327,7 @@ def collect_complexes(
     skipped_count = 0
     new_complex_count = 0
     missing_retry_count = 0
+    quota_exceeded = False
     for index, list_item in enumerate(list_items, start=1):
         kapt_code = value(list_item, "kaptCode")
         kapt_name = value(list_item, "kaptName")
@@ -352,6 +361,11 @@ def collect_complexes(
             complex_row = parse_complex(list_item, basic_item)
             saved += upsert_complexes([complex_row])
             full_info_count += 1
+        except ApiQuotaExceeded as error:
+            quota_exceeded = True
+            print(f"  stopped: {error}")
+            print("  API quota is exhausted. Run this command again tomorrow to continue missing rows.")
+            break
         except Exception as error:
             fallback_row = parse_complex(list_item, {})
             saved += upsert_complexes([fallback_row])
@@ -370,7 +384,8 @@ def collect_complexes(
         f"List only: {list_only_count}. "
         f"Skipped existing: {skipped_count}. "
         f"New complexes: {new_complex_count}. "
-        f"Missing retries: {missing_retry_count}."
+        f"Missing retries: {missing_retry_count}. "
+        f"Quota exceeded: {quota_exceeded}."
     )
 
 

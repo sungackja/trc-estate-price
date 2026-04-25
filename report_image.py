@@ -25,6 +25,7 @@ REPORT_INNER_WIDTH = WIDTH - MARGIN * 2
 LABEL_TODAY = "\uc624\ub298\uc758"
 REPORT_TITLE = "\uc11c\uc6b8 \uc544\ud30c\ud2b8 \uc2e0\uace0\uac00 \ub9ac\uc2a4\ud2b8"
 TAGLINE = "\uc5b4\ub514\uc5d0\ub3c4 \uc5c6\ub294 \ubd80\ub3d9\uc0b0 \uc774\uc57c\uae30"
+INSTAGRAM_ID = "@tiger.rich.company"
 NO_ROWS = "\uc2e0\uaddc \uacf5\uac1c \uc2e0\uace0\uac00\uac00 \uc544\uc9c1 \uc5c6\uc2b5\ub2c8\ub2e4."
 
 
@@ -101,6 +102,24 @@ def svg_tiger_logo(today_text, x=30, y=20, height=58):
     ]
 
 
+def svg_instagram_id(x=548, y=97):
+    icon_size = 15
+    icon_y = y - icon_size / 2
+    text_x = x + icon_size + 6
+    return [
+        (
+            f'<rect x="{x}" y="{icon_y}" width="{icon_size}" height="{icon_size}" rx="4" '
+            f'fill="#e4405f" stroke="#e4405f" stroke-width="1"/>'
+        ),
+        (
+            f'<circle cx="{x + icon_size / 2}" cy="{y}" r="3.5" '
+            f'fill="none" stroke="white" stroke-width="1.5"/>'
+        ),
+        f'<circle cx="{x + icon_size - 3.8}" cy="{icon_y + 3.8}" r="1.3" fill="white"/>',
+        svg_text(text_x, y + 0.5, INSTAGRAM_ID, size=13, fill="#333333", anchor="start"),
+    ]
+
+
 def create_report_image(target_date=None, output_path=REPORT_IMAGE_PATH, limit=38):
     target_date, rows = build_report_rows(target_date, limit=limit)
     today = datetime.now(timezone(timedelta(hours=9))).date()
@@ -133,6 +152,7 @@ def create_report_image(target_date=None, output_path=REPORT_IMAGE_PATH, limit=3
         svg_text(602, 53, REPORT_TITLE, size=38, weight=700, fill="white"),
         svg_rect(MARGIN, 84, REPORT_INNER_WIDTH, 24, fill="#f5f8fb", stroke="#d9d9d9"),
         svg_text(MARGIN + 14, 97, today_text, size=15, anchor="start"),
+        *svg_instagram_id(),
         svg_text(WIDTH - 36, 97, TAGLINE, size=15, anchor="end"),
     ]
 

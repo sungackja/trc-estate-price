@@ -6,6 +6,7 @@ from PIL import Image, ImageDraw, ImageFont
 from complexes import get_household_count_for_trade
 from report_image import (
     INSTAGRAM_ID,
+    INSTAGRAM_LOGO_PATH,
     LABEL_TODAY,
     MARGIN,
     NO_ROWS,
@@ -94,12 +95,61 @@ def draw_tiger_logo(image, draw, today_text, x=30, y=20, height=58):
     draw_text(draw, (x + 238, y + height / 2 + 2), today_text, size=24, bold=True, fill="#ffe082")
 
 
-def draw_instagram_id(draw, x=500, y=97):
+def draw_instagram_id(image, draw, x=500, y=97):
     icon_size = 15
     icon_y = y - icon_size / 2
-    draw.rounded_rectangle((x, icon_y, x + icon_size, icon_y + icon_size), radius=4, fill="#e4405f")
-    draw.ellipse((x + 4, y - 3.5, x + 11, y + 3.5), outline="white", width=2)
-    draw.ellipse((x + icon_size - 5.1, icon_y + 2.5, x + icon_size - 2.5, icon_y + 5.1), fill="white")
+    if INSTAGRAM_LOGO_PATH.exists():
+        logo = Image.open(INSTAGRAM_LOGO_PATH).convert("RGBA")
+        logo = logo.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
+        image.alpha_composite(logo, (int(x), int(icon_y)))
+        draw_text(draw, (x + icon_size + 6, y + 0.5), INSTAGRAM_ID, size=13, fill="#333333", anchor="lm")
+        return
+
+    scale = 4
+    large_size = icon_size * scale
+    gradient = Image.new("RGBA", (large_size, large_size), (0, 0, 0, 0))
+    gradient_pixels = gradient.load()
+    stops = [
+        (0.0, (255, 176, 0)),
+        (0.32, (255, 61, 0)),
+        (0.62, (255, 0, 105)),
+        (1.0, (138, 0, 255)),
+    ]
+    for gy in range(large_size):
+        for gx in range(large_size):
+            t = ((large_size - 1 - gy) + gx) / (2 * (large_size - 1))
+            for index in range(len(stops) - 1):
+                left_t, left_color = stops[index]
+                right_t, right_color = stops[index + 1]
+                if left_t <= t <= right_t:
+                    local_t = (t - left_t) / (right_t - left_t)
+                    color = tuple(
+                        int(left_color[channel] + (right_color[channel] - left_color[channel]) * local_t)
+                        for channel in range(3)
+                    )
+                    gradient_pixels[gx, gy] = (*color, 255)
+                    break
+
+    mask = Image.new("L", (large_size, large_size), 0)
+    mask_draw = ImageDraw.Draw(mask)
+    mask_draw.rounded_rectangle((0, 0, large_size - 1, large_size - 1), radius=4 * scale, fill=255)
+    gradient.putalpha(mask)
+    icon = gradient.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
+
+    base_image = draw.im
+    if isinstance(base_image, Image.Image):
+        base_image.alpha_composite(icon, (int(x), int(icon_y)))
+    else:
+        draw.bitmap((x, icon_y), icon)
+
+    draw.rounded_rectangle(
+        (x + 3.3, icon_y + 3.3, x + icon_size - 3.3, icon_y + icon_size - 3.3),
+        radius=2.7,
+        outline="white",
+        width=2,
+    )
+    draw.ellipse((x + 5.0, y - 2.5, x + 10.0, y + 2.5), outline="white", width=2)
+    draw.ellipse((x + icon_size - 5.5, icon_y + 3.2, x + icon_size - 3.2, icon_y + 5.5), fill="white")
     draw_text(draw, (x + icon_size + 6, y + 0.5), INSTAGRAM_ID, size=13, fill="#333333", anchor="lm")
 
 
@@ -133,7 +183,7 @@ def create_report_png(target_date=None, output_path=TELEGRAM_PNG_PATH, limit=38)
 
     draw_cell(draw, MARGIN, 84, REPORT_INNER_WIDTH, 24, fill="#f5f8fb")
     draw_text(draw, (MARGIN + 14, 97), today_text, size=15, anchor="lm")
-    draw_instagram_id(draw)
+    draw_instagram_id(image, draw)
     draw_text(draw, (WIDTH - 36, 97), TAGLINE, size=15, anchor="rm")
 
     x = MARGIN

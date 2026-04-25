@@ -10,6 +10,7 @@ from records import find_newly_seen_record_highs
 
 OUTPUT_DIR = Path("public")
 REPORT_IMAGE_PATH = OUTPUT_DIR / "today-record-highs.svg"
+INSTAGRAM_LOGO_PATH = OUTPUT_DIR / "logo.png"
 TIGER_IMAGE_PATHS = [
     OUTPUT_DIR / "tiger.png",
     OUTPUT_DIR / "tiger.jpg",
@@ -106,16 +107,37 @@ def svg_instagram_id(x=500, y=97):
     icon_size = 15
     icon_y = y - icon_size / 2
     text_x = x + icon_size + 6
+    if INSTAGRAM_LOGO_PATH.exists():
+        mime_type = guess_type(INSTAGRAM_LOGO_PATH.name)[0] or "image/png"
+        encoded = base64.b64encode(INSTAGRAM_LOGO_PATH.read_bytes()).decode("ascii")
+        return [
+            f'<image x="{x}" y="{icon_y}" width="{icon_size}" height="{icon_size}" '
+            f'preserveAspectRatio="xMidYMid meet" '
+            f'href="data:{mime_type};base64,{encoded}"/>',
+            svg_text(text_x, y + 0.5, INSTAGRAM_ID, size=13, fill="#333333", anchor="start"),
+        ]
+
     return [
         (
-            f'<rect x="{x}" y="{icon_y}" width="{icon_size}" height="{icon_size}" rx="4" '
-            f'fill="#e4405f" stroke="#e4405f" stroke-width="1"/>'
+            "<defs>"
+            '<linearGradient id="instagramGradient" x1="0%" y1="100%" x2="100%" y2="0%">'
+            '<stop offset="0%" stop-color="#ffb000"/>'
+            '<stop offset="32%" stop-color="#ff3d00"/>'
+            '<stop offset="62%" stop-color="#ff0069"/>'
+            '<stop offset="100%" stop-color="#8a00ff"/>'
+            "</linearGradient>"
+            "</defs>"
         ),
         (
-            f'<circle cx="{x + icon_size / 2}" cy="{y}" r="3.5" '
-            f'fill="none" stroke="white" stroke-width="1.5"/>'
+            f'<rect x="{x}" y="{icon_y}" width="{icon_size}" height="{icon_size}" rx="4" '
+            f'fill="url(#instagramGradient)"/>'
         ),
-        f'<circle cx="{x + icon_size - 3.8}" cy="{icon_y + 3.8}" r="1.3" fill="white"/>',
+        (
+            f'<rect x="{x + 3.3}" y="{icon_y + 3.3}" width="{icon_size - 6.6}" '
+            f'height="{icon_size - 6.6}" rx="2.7" fill="none" stroke="white" stroke-width="1.8"/>'
+        ),
+        f'<circle cx="{x + icon_size / 2}" cy="{y}" r="2.6" fill="none" stroke="white" stroke-width="1.8"/>',
+        f'<circle cx="{x + icon_size - 4.4}" cy="{icon_y + 4.4}" r="1.15" fill="white"/>',
         svg_text(text_x, y + 0.5, INSTAGRAM_ID, size=13, fill="#333333", anchor="start"),
     ]
 

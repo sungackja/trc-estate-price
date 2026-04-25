@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from build_static_site import build_site
 from collector import collect_all
+from telegram_sender import send_telegram_report, telegram_is_configured
 
 
 def current_and_previous_months(today):
@@ -25,6 +26,7 @@ def parse_args():
     parser.add_argument("--report-date", default=default_report_date(), help="First-seen date to report")
     parser.add_argument("--sleep", type=float, default=0.2, help="Seconds to wait between API calls")
     parser.add_argument("--max-failures", type=int, default=10, help="Stop after this many consecutive failures")
+    parser.add_argument("--send-telegram", action="store_true", help="Send the generated report to Telegram")
     return parser.parse_args()
 
 
@@ -49,6 +51,10 @@ def main():
     image_path, html_path = build_site(target_date=args.report_date)
     print(f"Built image: {image_path}")
     print(f"Built site: {html_path}")
+
+    if args.send_telegram or telegram_is_configured():
+        send_telegram_report(image_path=image_path, report_date=args.report_date)
+
     print("Daily update finished")
 
 

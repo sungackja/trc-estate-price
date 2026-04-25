@@ -30,6 +30,10 @@ APT_BASIC_INFO_API_URL = (
 
 REQUEST_TIMEOUT_SECONDS = 20
 
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+TELEGRAM_ENABLED = os.getenv("TELEGRAM_ENABLED", "").lower() in ("1", "true", "yes", "y")
+
 SEOUL_GU_CODES = {
     "11110": "\uc885\ub85c\uad6c",
     "11140": "\uc911\uad6c",

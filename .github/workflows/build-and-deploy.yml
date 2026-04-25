@@ -22,6 +22,12 @@ on:
         required: false
       TELEGRAM_CHAT_ID:
         required: false
+      VERCEL_TOKEN:
+        required: false
+      VERCEL_ORG_ID:
+        required: false
+      VERCEL_PROJECT_ID:
+        required: false
 
 permissions:
   contents: read
@@ -35,6 +41,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -147,6 +157,13 @@ jobs:
       - name: Rebuild static site
         if: inputs.mode == 'monthly'
         run: python build_static_site.py
+
+      - name: Deploy generated public directory to Vercel
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
+        run: |
+          mkdir -p .vercel
+          printf '{"orgId":"%s","projectId":"%s"}' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
+          npx vercel@latest deploy --prod --yes --token "$VERCEL_TOKEN"
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

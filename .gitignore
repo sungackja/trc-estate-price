@@ -5,3 +5,4 @@ __pycache__/
 venv/
 data/
 public/today-record-highs-telegram.png
+.vercel/

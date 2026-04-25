@@ -1,4 +1,5 @@
 name: Monthly apartment complex refresh
+run-name: Monthly apartment complex refresh
 
 on:
   workflow_dispatch:

@@ -1,4 +1,5 @@
 name: Daily record-high report
+run-name: Daily record-high report
 
 on:
   workflow_dispatch:

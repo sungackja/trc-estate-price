@@ -99,6 +99,12 @@ jobs:
               subprocess.check_call(["python", "complex_collector.py", "--list-only", "--sleep", "0.05"])
           PY
 
+      - name: Fill missing apartment complex household counts
+        env:
+          APT_INFO_API_KEY: ${{ secrets.APT_INFO_API_KEY }}
+          MOLIT_API_KEY: ${{ secrets.MOLIT_API_KEY }}
+        run: python complex_collector.py --retry-missing --sleep 0.2
+
       - name: Refresh current and previous month
         env:
           MOLIT_API_KEY: ${{ secrets.MOLIT_API_KEY }}

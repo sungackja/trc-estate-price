@@ -124,7 +124,11 @@ def extract_items(data):
     body = extract_body(data)
     items = body.get("items") or body.get("item") or []
     if isinstance(items, dict):
-        items = items.get("item") or []
+        nested_item = items.get("item")
+        if nested_item is not None:
+            items = nested_item
+        else:
+            items = [items]
     return as_list(items)
 
 
@@ -169,6 +173,9 @@ def fetch_basic_info(kapt_code):
         if isinstance(item, dict) and item:
             return item
     body = extract_body(data)
+    body_item = body.get("item") if isinstance(body, dict) else None
+    if isinstance(body_item, dict) and body_item:
+        return body_item
     if isinstance(body, dict) and body:
         return body
     raise RuntimeError("Basic info response did not contain usable apartment fields.")

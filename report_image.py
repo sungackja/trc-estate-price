@@ -102,7 +102,7 @@ def svg_tiger_logo(today_text, x=30, y=20, height=58):
     ]
 
 
-def svg_instagram_id(x=548, y=97):
+def svg_instagram_id(x=500, y=97):
     icon_size = 15
     icon_y = y - icon_size / 2
     text_x = x + icon_size + 6

@@ -4,6 +4,7 @@ import requests
 
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_ENABLED, REQUEST_TIMEOUT_SECONDS
 from report_image import REPORT_IMAGE_PATH, default_target_date
+from report_png import create_report_png
 
 
 TELEGRAM_API_URL = "https://api.telegram.org/bot{token}/{method}"
@@ -29,18 +30,7 @@ def make_telegram_png(image_path):
     if image_path.suffix.lower() != ".svg":
         return image_path
 
-    try:
-        import cairosvg
-    except ImportError as error:
-        raise RuntimeError("cairosvg is required to convert the SVG report to PNG.") from error
-
-    TELEGRAM_PNG_PATH.parent.mkdir(exist_ok=True)
-    cairosvg.svg2png(
-        url=str(image_path),
-        write_to=str(TELEGRAM_PNG_PATH),
-        output_width=900,
-    )
-    return TELEGRAM_PNG_PATH
+    return create_report_png(output_path=TELEGRAM_PNG_PATH)
 
 
 def send_telegram_report(image_path=REPORT_IMAGE_PATH, report_date=None):

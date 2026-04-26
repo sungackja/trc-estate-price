@@ -215,6 +215,14 @@ def first_value(data, keys, default=""):
     return default
 
 
+def first_positive_int(data, keys):
+    for key in keys:
+        found = to_int(value(data, key))
+        if found and found > 0:
+            return found
+    return None
+
+
 HOUSEHOLD_COUNT_KEYS = (
     "kaptdaCnt",
     "householdCount",
@@ -291,7 +299,7 @@ def parse_complex(list_item, basic_item=None):
         "as3": value(list_item, "as3"),
         "as4": value(list_item, "as4"),
         "bjd_code": first_value(basic_item, BJD_CODE_KEYS, value(list_item, "bjdCode")),
-        "household_count": to_int(first_value(basic_item, HOUSEHOLD_COUNT_KEYS)),
+        "household_count": first_positive_int(basic_item, HOUSEHOLD_COUNT_KEYS),
         "dong_count": to_int(first_value(basic_item, DONG_COUNT_KEYS)),
         "used_date": first_value(basic_item, USED_DATE_KEYS),
         "address": first_value(basic_item, ADDRESS_KEYS),
@@ -316,7 +324,7 @@ def collect_complexes(
             item
             for item in list_items
             if value(item, "kaptCode") not in existing_complexes
-            or existing_complexes.get(value(item, "kaptCode")) is None
+            or not existing_complexes.get(value(item, "kaptCode"))
         ]
     if limit:
         list_items = list_items[:limit]
@@ -333,7 +341,7 @@ def collect_complexes(
         kapt_name = value(list_item, "kaptName")
         print(f"[{index}/{len(list_items)}] {kapt_code} {kapt_name}")
         is_new_complex = kapt_code not in existing_complexes
-        has_household_count = existing_complexes.get(kapt_code) is not None
+        has_household_count = bool(existing_complexes.get(kapt_code))
 
         if is_new_complex:
             new_complex_count += 1

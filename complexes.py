@@ -1,4 +1,5 @@
 import re
+import json
 from functools import lru_cache
 
 from database import get_connection, init_db
@@ -14,6 +15,9 @@ REMOVE_WORDS = (
 
 
 NORMALIZE_REPLACEMENTS = (
+    ("IPARK", "\uc544\uc774\ud30c\ud06c"),
+    ("I-PARK", "\uc544\uc774\ud30c\ud06c"),
+    ("iPark", "\uc544\uc774\ud30c\ud06c"),
     ("\uc5d0\uc2a4\ucf00\uc774", "sk"),
     ("\uc5e0\ubca8\ub9ac", "\uc5e0\ubc38\ub9ac"),
     ("\ubdf0", "view"),
@@ -61,7 +65,12 @@ def address_has_jibun(address, dong_name, jibun):
 
 def remove_location_words(value, gu_name, dong_name):
     text = value
-    for word in (gu_name, dong_name, (dong_name or "").replace("\ub3d9", "")):
+    for word in (
+        gu_name,
+        (gu_name or "").replace("\uad6c", ""),
+        dong_name,
+        (dong_name or "").replace("\ub3d9", ""),
+    ):
         if word:
             text = text.replace(word, "")
     return text
@@ -99,6 +108,30 @@ def name_similarity_score(target, candidate_name, gu_name, dong_name):
     return score
 
 
+def candidate_household_count(candidate):
+    stored_count = candidate["household_count"]
+    if stored_count and stored_count > 0:
+        return stored_count
+
+    raw_xml = candidate["raw_xml"]
+    if not raw_xml:
+        return None
+    try:
+        raw_data = json.loads(raw_xml)
+    except (TypeError, ValueError):
+        return None
+
+    for key in ("hoCnt", "kaptdaCnt", "householdCount", "householdCnt"):
+        value = raw_data.get(key)
+        try:
+            count = int(float(str(value).replace(",", "")))
+        except (TypeError, ValueError):
+            continue
+        if count > 0:
+            return count
+    return None
+
+
 def get_household_count_for_trade(row):
     return get_household_count(
         row["gu_name"],
@@ -124,10 +157,9 @@ def get_household_count(gu_name, dong_name, apt_name, jibun=None):
     with get_connection() as conn:
         candidates = conn.execute(
             """
-            SELECT household_count, kapt_name, address, road_address
+            SELECT household_count, kapt_name, address, road_address, raw_xml
             FROM apartment_complexes
-            WHERE household_count IS NOT NULL
-              AND as2 = :gu_name
+            WHERE as2 = :gu_name
               AND (:dong_name IS NULL OR as3 = :dong_name)
             """,
             {"gu_name": gu_name, "dong_name": dong_name},
@@ -135,7 +167,12 @@ def get_household_count(gu_name, dong_name, apt_name, jibun=None):
 
     best_count = None
     best_score = 0
+    same_jibun_matches = []
     for candidate in candidates:
+        household_count = candidate_household_count(candidate)
+        if not household_count:
+            continue
+
         raw_candidate_name = candidate["kapt_name"]
         candidate_name = normalize_name(raw_candidate_name)
         if not candidate_name:
@@ -146,6 +183,9 @@ def get_household_count(gu_name, dong_name, apt_name, jibun=None):
         if alias_target and alias_target == candidate_name:
             score = 200
 
+        if same_jibun:
+            same_jibun_matches.append((score, household_count))
+
         if same_jibun and score >= 28:
             score += 250
         elif score < 72:
@@ -153,6 +193,15 @@ def get_household_count(gu_name, dong_name, apt_name, jibun=None):
 
         if score > best_score:
             best_score = score
-            best_count = candidate["household_count"]
+            best_count = household_count
+
+    if best_count:
+        return best_count
+
+    if same_jibun_matches:
+        same_jibun_matches.sort(reverse=True)
+        best_same_jibun_score, best_same_jibun_count = same_jibun_matches[0]
+        if len(same_jibun_matches) == 1 or best_same_jibun_score >= 15:
+            return best_same_jibun_count
 
     return best_count

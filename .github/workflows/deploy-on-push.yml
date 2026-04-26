@@ -1,0 +1,20 @@
+name: Deploy site on pushes to main
+run-name: Deploy site on pushes to main
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/build-and-deploy.yml
+    with:
+      mode: site
+      send_telegram: false
+    secrets: inherit

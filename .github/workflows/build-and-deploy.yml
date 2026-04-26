@@ -155,7 +155,7 @@ jobs:
         run: python compact_database.py --skip-backup
 
       - name: Rebuild static site
-        if: inputs.mode == 'monthly'
+        if: inputs.mode == 'monthly' || inputs.mode == 'site'
         run: python build_static_site.py
 
       - name: Package SQLite database snapshot

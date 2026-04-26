@@ -14,11 +14,36 @@ GROUP_MATCH_SQL = """
 """
 
 
+EXCLUDED_DISPLAY_TRADES = (
+    ("\uc1a1\ud30c\uad6c", "\uc1a1\ud30c\ub3d9", "\uacbd\ub0a8\ub808\uc774\ud06c\ud30c\ud06c"),
+)
+
+
+def excluded_display_trade_sql(alias):
+    conditions = []
+    for index, _ in enumerate(EXCLUDED_DISPLAY_TRADES):
+        conditions.append(
+            f"NOT ({alias}.gu_name = :excluded_gu_{index} "
+            f"AND {alias}.umd_nm = :excluded_dong_{index} "
+            f"AND {alias}.apt_name = :excluded_apt_{index})"
+        )
+    return " AND ".join(conditions) or "1 = 1"
+
+
+def add_excluded_display_trade_params(params):
+    for index, (gu_name, dong_name, apt_name) in enumerate(EXCLUDED_DISPLAY_TRADES):
+        params[f"excluded_gu_{index}"] = gu_name
+        params[f"excluded_dong_{index}"] = dong_name
+        params[f"excluded_apt_{index}"] = apt_name
+    return params
+
+
 def find_record_highs(limit=100, gu_code=None, min_date=None, deal_date=None):
     init_db()
 
     filters = []
     params = {"limit": limit}
+    add_excluded_display_trade_params(params)
 
     if gu_code:
         filters.append("t.sgg_cd = :gu_code")
@@ -47,6 +72,7 @@ def find_record_highs(limit=100, gu_code=None, min_date=None, deal_date=None):
                       AND p.deal_date < t.deal_date
                 ) AS previous_high
             FROM apartment_trades t
+            WHERE {excluded_display_trade_sql("t")}
         )
         SELECT
             *
@@ -67,6 +93,7 @@ def find_newly_seen_record_highs(limit=100, seen_date=None, gu_code=None):
 
     filters = ["t.is_backfill = 0", "t.first_seen_date = :seen_date"]
     params = {"seen_date": seen_date}
+    add_excluded_display_trade_params(params)
 
     if gu_code:
         filters.append("t.sgg_cd = :gu_code")
@@ -90,6 +117,7 @@ def find_newly_seen_record_highs(limit=100, seen_date=None, gu_code=None):
                 ) AS previous_high
             FROM apartment_trades t
             WHERE {where_sql}
+              AND {excluded_display_trade_sql("t")}
         )
         SELECT *
         FROM candidates
@@ -108,6 +136,7 @@ def find_newly_seen_trades(limit=1000, seen_date=None, gu_code=None):
 
     filters = ["is_backfill = 0", "first_seen_date = :seen_date"]
     params = {"seen_date": seen_date}
+    add_excluded_display_trade_params(params)
 
     if gu_code:
         filters.append("sgg_cd = :gu_code")
@@ -122,6 +151,7 @@ def find_newly_seen_trades(limit=1000, seen_date=None, gu_code=None):
         SELECT *
         FROM apartment_trades
         WHERE {" AND ".join(filters)}
+          AND {excluded_display_trade_sql("apartment_trades")}
         ORDER BY gu_name ASC, umd_nm ASC, apt_name ASC, deal_amount DESC, deal_date DESC
         {limit_sql}
     """
@@ -135,6 +165,7 @@ def latest_newly_seen_record_high_date(max_seen_date=None):
 
     filters = ["t.is_backfill = 0", "t.first_seen_date IS NOT NULL"]
     params = {}
+    add_excluded_display_trade_params(params)
     if max_seen_date:
         filters.append("t.first_seen_date <= :max_seen_date")
         params["max_seen_date"] = max_seen_date
@@ -151,6 +182,7 @@ def latest_newly_seen_record_high_date(max_seen_date=None):
                 ) AS previous_high
             FROM apartment_trades t
             WHERE {" AND ".join(filters)}
+              AND {excluded_display_trade_sql("t")}
         )
         SELECT MAX(first_seen_date) AS latest_seen_date
         FROM candidates
@@ -168,6 +200,7 @@ def latest_newly_seen_trade_date(max_seen_date=None):
 
     filters = ["is_backfill = 0", "first_seen_date IS NOT NULL"]
     params = {}
+    add_excluded_display_trade_params(params)
     if max_seen_date:
         filters.append("first_seen_date <= :max_seen_date")
         params["max_seen_date"] = max_seen_date
@@ -176,6 +209,7 @@ def latest_newly_seen_trade_date(max_seen_date=None):
         SELECT MAX(first_seen_date) AS latest_seen_date
         FROM apartment_trades
         WHERE {" AND ".join(filters)}
+          AND {excluded_display_trade_sql("apartment_trades")}
     """
 
     with get_connection() as conn:

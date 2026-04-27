@@ -82,6 +82,8 @@ def record_row_to_dict(row):
 
 def latest_trade_to_dict(row):
     household_count = get_household_count_for_trade(row)
+    previous_high = row["previous_high"]
+    is_record_high = previous_high is not None and row["deal_amount"] > previous_high
     return {
         "gu": row["gu_name"],
         "dong": row["umd_nm"] or "",
@@ -91,6 +93,9 @@ def latest_trade_to_dict(row):
         "seenDate": row["first_seen_date"],
         "price": row["deal_amount"],
         "priceEok": price_eok(row["deal_amount"]),
+        "previousHigh": previous_high,
+        "previousHighEok": price_eok(previous_high) if previous_high else None,
+        "isRecordHigh": is_record_high,
         "households": household_count,
         "floor": row["floor"],
     }
@@ -311,6 +316,10 @@ def build_site(target_date=None):
             color: #d00000;
         }}
 
+        .record-high-row td {{
+            color: #d00000;
+        }}
+
         .empty {{
             color: #6b7280;
             padding: 30px;
@@ -510,7 +519,7 @@ def build_site(target_date=None):
             empty: "recordEmpty",
             count: "recordCount",
             renderRow: (row) => `
-                <tr>
+                <tr class="${{row.isRecordHigh ? "record-high-row" : ""}}">
                     <td>${{row.seenDate || "-"}}</td>
                     <td>${{row.dealDate}}</td>
                     <td>${{row.gu}}</td>
@@ -536,7 +545,7 @@ def build_site(target_date=None):
             empty: "latestEmpty",
             count: "latestCount",
             renderRow: (row) => `
-                <tr>
+                <tr class="${{row.isRecordHigh ? "record-high-row" : ""}}">
                     <td>${{row.seenDate || "-"}}</td>
                     <td>${{row.dealDate}}</td>
                     <td>${{row.gu}}</td>

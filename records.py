@@ -134,12 +134,12 @@ def find_newly_seen_record_highs(limit=100, seen_date=None, gu_code=None):
 def find_newly_seen_trades(limit=1000, seen_date=None, gu_code=None):
     init_db()
 
-    filters = ["is_backfill = 0", "first_seen_date = :seen_date"]
+    filters = ["t.is_backfill = 0", "t.first_seen_date = :seen_date"]
     params = {"seen_date": seen_date}
     add_excluded_display_trade_params(params)
 
     if gu_code:
-        filters.append("sgg_cd = :gu_code")
+        filters.append("t.sgg_cd = :gu_code")
         params["gu_code"] = gu_code
 
     limit_sql = ""
@@ -148,10 +148,21 @@ def find_newly_seen_trades(limit=1000, seen_date=None, gu_code=None):
         params["limit"] = limit
 
     query = f"""
+        WITH candidates AS (
+            SELECT
+                t.*,
+                (
+                    SELECT MAX(p.deal_amount)
+                    FROM apartment_trades p
+                    WHERE {GROUP_MATCH_SQL}
+                      AND p.id <> t.id
+                ) AS previous_high
+            FROM apartment_trades t
+            WHERE {" AND ".join(filters)}
+              AND {excluded_display_trade_sql("t")}
+        )
         SELECT *
-        FROM apartment_trades
-        WHERE {" AND ".join(filters)}
-          AND {excluded_display_trade_sql("apartment_trades")}
+        FROM candidates
         ORDER BY gu_name ASC, umd_nm ASC, apt_name ASC, deal_amount DESC, deal_date DESC
         {limit_sql}
     """

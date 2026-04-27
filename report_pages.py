@@ -32,6 +32,12 @@ ROWS_PER_PAGE = (PAGE_HEIGHT - TABLE_Y - TABLE_HEADER_HEIGHT - 24) // ROW_HEIGHT
 OUTPUT_DIR = Path("public")
 
 
+class ReportRow(list):
+    def __init__(self, values, is_record_high=False):
+        super().__init__(values)
+        self.is_record_high = is_record_high
+
+
 def draw_cell(draw, x, y, width, height, fill="white", outline="#d9d9d9", width_px=1):
     draw.rectangle((x, y, x + width, y + height), fill=fill, outline=outline, width=width_px)
 
@@ -128,11 +134,12 @@ def draw_table(draw, *, columns, rows, empty_text):
 
     for row_values in rows:
         cursor = x
+        row_fill = "#d00000" if getattr(row_values, "is_record_high", False) else "#111111"
         for index, ((_, width, align), value) in enumerate(zip(columns, row_values)):
             draw_cell(draw, cursor, y, width, ROW_HEIGHT)
             anchor = "lm" if align == "left" else "mm"
             text_x = cursor + 8 if align == "left" else cursor + width / 2
-            fill = "#d00000" if value.startswith("▲") else "#111111"
+            fill = "#d00000" if value.startswith("▲") else row_fill
             bold = index in (2, 4)
             draw_text(draw, (text_x, y + ROW_HEIGHT / 2 + 1), value, size=18, bold=bold, fill=fill, anchor=anchor)
             cursor += width
@@ -156,7 +163,9 @@ def record_row_values(row):
 def trade_row_values(row):
     household_count = get_household_count_for_trade(row)
     floor = row["floor"] if row["floor"] is not None else "-"
-    return [
+    previous_high = row["previous_high"]
+    is_record_high = previous_high is not None and row["deal_amount"] > previous_high
+    return ReportRow([
         row["gu_name"],
         f"{row['exclusive_area']:.0f}",
         fit_text(f"{row['apt_name']} ({row['umd_nm']})", 36),
@@ -164,7 +173,7 @@ def trade_row_values(row):
         format_price(row["deal_amount"]),
         str(floor),
         f"{household_count}" if household_count else "-",
-    ]
+    ], is_record_high=is_record_high)
 
 
 def create_paginated_report_pngs(

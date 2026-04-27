@@ -7,6 +7,7 @@ from complexes import get_household_count_for_trade
 from report_image import (
     INSTAGRAM_ID,
     INSTAGRAM_LOGO_PATH,
+    HEADER_TITLE,
     LABEL_TODAY,
     MARGIN,
     NO_ROWS,
@@ -66,16 +67,22 @@ def draw_cell(draw, x, y, width, height, fill="white", outline="#d9d9d9"):
     draw.rectangle((x, y, x + width, y + height), fill=fill, outline=outline)
 
 
-def draw_tiger_logo(image, draw, today_text, x=30, y=20, height=58):
+def draw_tiger_logo(image, draw, x=30, y=20, height=58):
     tiger_image_path = find_tiger_image_path()
-    if tiger_image_path is None:
-        draw.polygon([(42, 36), (172, 20), (184, 58), (54, 74)], fill="#001a9b")
-        draw_text(draw, (112, 54), LABEL_TODAY, size=25, bold=True, fill="white")
-        return
-
     circle_size = height - 4
     circle_cx = x + circle_size / 2
     circle_cy = y + height / 2
+    if tiger_image_path is None:
+        circle_box = (
+            circle_cx - circle_size / 2,
+            circle_cy - circle_size / 2,
+            circle_cx + circle_size / 2,
+            circle_cy + circle_size / 2,
+        )
+        draw.ellipse(circle_box, fill="#ffc43d", outline="white", width=2)
+        draw_text(draw, (circle_cx, circle_cy + 1), "T", size=30, bold=True, fill="#b40000")
+        return
+
     circle_box = (
         circle_cx - circle_size / 2,
         circle_cy - circle_size / 2,
@@ -90,9 +97,6 @@ def draw_tiger_logo(image, draw, today_text, x=30, y=20, height=58):
     image_x = int(circle_cx - tiger.width / 2)
     image_y = int(circle_cy - tiger.height / 2 - 1)
     image.alpha_composite(tiger, (image_x, image_y))
-
-    draw_text(draw, (x + 118, y + height / 2 + 1), LABEL_TODAY, size=36, bold=True, fill="white")
-    draw_text(draw, (x + 238, y + height / 2 + 2), today_text, size=24, bold=True, fill="#ffe082")
 
 
 def draw_instagram_id(image, draw, x=500, y=97):
@@ -178,12 +182,12 @@ def create_report_png(target_date=None, output_path=TELEGRAM_PNG_PATH, limit=38)
     draw = ImageDraw.Draw(image)
 
     draw.rectangle((MARGIN, 18, MARGIN + REPORT_INNER_WIDTH, 82), fill="#b40000")
-    draw_tiger_logo(image, draw, today_short)
-    draw_text(draw, (602, 53), REPORT_TITLE, size=38, bold=True, fill="white")
+    draw_tiger_logo(image, draw)
+    draw_text(draw, (400, 53), HEADER_TITLE, size=44, bold=True, fill="white")
+    draw_text(draw, (WIDTH - 32, 53), today_short, size=36, bold=True, fill="#ffe082", anchor="rm")
 
     draw_cell(draw, MARGIN, 84, REPORT_INNER_WIDTH, 24, fill="#f5f8fb")
-    draw_text(draw, (MARGIN + 14, 97), today_text, size=15, anchor="lm")
-    draw_instagram_id(image, draw)
+    draw_instagram_id(image, draw, x=MARGIN + 14)
     draw_text(draw, (WIDTH - 36, 97), TAGLINE, size=15, anchor="rm")
 
     x = MARGIN

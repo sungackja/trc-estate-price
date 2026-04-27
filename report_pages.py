@@ -65,9 +65,6 @@ def draw_tiger_badge(image, draw, today_text):
             ),
         )
 
-    draw_text(draw, (MARGIN + 112, circle_cy + 2), LABEL_TODAY, size=48, bold=True, fill="white", anchor="lm")
-    draw_text(draw, (MARGIN + 265, circle_cy + 3), today_text, size=31, bold=True, fill="#ffe082", anchor="lm")
-
 
 def draw_instagram(image, draw):
     icon_size = 24
@@ -91,11 +88,19 @@ def draw_instagram(image, draw):
 def draw_header(image, draw, *, title, today_text, date_text, page_number, page_count):
     draw.rectangle((MARGIN, HEADER_Y, MARGIN + INNER_WIDTH, HEADER_Y + HEADER_HEIGHT), fill="#b40000")
     draw_tiger_badge(image, draw, today_text)
-    title_size = 43 if len(title) <= 14 else 40
-    draw_text(draw, (MARGIN + 755, HEADER_Y + HEADER_HEIGHT / 2 + 2), title, size=title_size, bold=True, fill="white")
+    header_title = f"{LABEL_TODAY} {title.replace(' 리스트', '')}"
+    draw_text(draw, (PAGE_WIDTH / 2, HEADER_Y + HEADER_HEIGHT / 2 + 2), header_title, size=44, bold=True, fill="white")
+    draw_text(
+        draw,
+        (MARGIN + INNER_WIDTH - 20, HEADER_Y + HEADER_HEIGHT / 2 + 3),
+        today_text,
+        size=36,
+        bold=True,
+        fill="#ffe082",
+        anchor="rm",
+    )
 
     draw_cell(draw, MARGIN, META_Y, INNER_WIDTH, META_HEIGHT, fill="#f5f8fb")
-    draw_text(draw, (MARGIN + 18, META_Y + META_HEIGHT / 2 + 1), date_text, size=22, anchor="lm")
     draw_instagram(image, draw)
     draw_text(
         draw,

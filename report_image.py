@@ -24,7 +24,8 @@ ROW_HEIGHT = 28
 REPORT_INNER_WIDTH = WIDTH - MARGIN * 2
 
 LABEL_TODAY = "\uc624\ub298\uc758"
-REPORT_TITLE = "\uc11c\uc6b8 \uc544\ud30c\ud2b8 \uc2e0\uace0\uac00 \ub9ac\uc2a4\ud2b8"
+REPORT_TITLE = "\uc11c\uc6b8 \uc544\ud30c\ud2b8 \uc2e0\uace0\uac00"
+HEADER_TITLE = f"{LABEL_TODAY} {REPORT_TITLE}"
 TAGLINE = "\uc5b4\ub514\uc5d0\ub3c4 \uc5c6\ub294 \ubd80\ub3d9\uc0b0 \uc774\uc57c\uae30"
 INSTAGRAM_ID = "@tiger.rich.company"
 NO_ROWS = "\uc2e0\uaddc \uacf5\uac1c \uc2e0\uace0\uac00\uac00 \uc544\uc9c1 \uc5c6\uc2b5\ub2c8\ub2e4."
@@ -74,12 +75,16 @@ def find_tiger_image_path():
     return None
 
 
-def svg_tiger_logo(today_text, x=30, y=20, height=58):
+def svg_tiger_logo(x=30, y=20, height=58):
     tiger_image_path = find_tiger_image_path()
     if tiger_image_path is None:
+        circle_size = height - 4
+        circle_cx = x + circle_size / 2
+        circle_cy = y + height / 2
         return [
-            '<polygon points="42,36 172,20 184,58 54,74" fill="#001a9b"/>',
-            svg_text(112, 54, LABEL_TODAY, size=25, weight=700, fill="white"),
+            f'<circle cx="{circle_cx}" cy="{circle_cy}" r="{circle_size / 2}" fill="#ffc43d"/>',
+            f'<circle cx="{circle_cx}" cy="{circle_cy}" r="{circle_size / 2}" fill="none" stroke="white" stroke-width="2"/>',
+            svg_text(circle_cx, circle_cy + 1, "T", size=30, weight=700, fill="#b40000"),
         ]
 
     mime_type = guess_type(tiger_image_path.name)[0] or "image/png"
@@ -98,8 +103,6 @@ def svg_tiger_logo(today_text, x=30, y=20, height=58):
         f'<image x="{image_x}" y="{image_y}" width="{image_width}" height="{image_height}" '
         f'preserveAspectRatio="xMidYMid meet" '
         f'href="data:{mime_type};base64,{encoded}"/>',
-        svg_text(x + 118, y + height / 2 + 1, LABEL_TODAY, size=36, weight=700, fill="white"),
-        svg_text(x + 238, y + height / 2 + 2, today_text, size=24, weight=700, fill="#ffe082"),
     ]
 
 
@@ -170,11 +173,11 @@ def create_report_image(target_date=None, output_path=REPORT_IMAGE_PATH, limit=3
         "</style>",
         svg_rect(0, 0, WIDTH, height, fill="white", stroke="white"),
         svg_rect(MARGIN, 18, REPORT_INNER_WIDTH, 64, fill="#b40000", stroke="#b40000"),
-        *svg_tiger_logo(today_short),
-        svg_text(602, 53, REPORT_TITLE, size=38, weight=700, fill="white"),
+        *svg_tiger_logo(),
+        svg_text(400, 53, HEADER_TITLE, size=44, weight=700, fill="white"),
+        svg_text(WIDTH - 32, 53, today_short, size=36, weight=700, fill="#ffe082", anchor="end"),
         svg_rect(MARGIN, 84, REPORT_INNER_WIDTH, 24, fill="#f5f8fb", stroke="#d9d9d9"),
-        svg_text(MARGIN + 14, 97, today_text, size=15, anchor="start"),
-        *svg_instagram_id(),
+        *svg_instagram_id(x=MARGIN + 14),
         svg_text(WIDTH - 36, 97, TAGLINE, size=15, anchor="end"),
     ]
 

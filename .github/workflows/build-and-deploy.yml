@@ -160,6 +160,15 @@ jobs:
           MOLIT_API_KEY: ${{ secrets.MOLIT_API_KEY }}
         run: python build_static_site.py
 
+      - name: Send Telegram report
+        if: inputs.send_telegram && inputs.mode != 'daily'
+        env:
+          MOLIT_API_KEY: ${{ secrets.MOLIT_API_KEY }}
+          TELEGRAM_ENABLED: ${{ secrets.TELEGRAM_ENABLED || 'true' }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python telegram_sender.py
+
       - name: Package SQLite database snapshot
         run: |
           if [ -f data/trades.sqlite3 ]; then

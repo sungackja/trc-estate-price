@@ -16,5 +16,5 @@ jobs:
     uses: ./.github/workflows/build-and-deploy.yml
     with:
       mode: site
-      send_telegram: false
+      send_telegram: true
     secrets: inherit

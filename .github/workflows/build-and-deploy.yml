@@ -124,11 +124,15 @@ jobs:
           if count:
               print(f"Complex table already has {count} rows. Skipping.")
           else:
-              subprocess.check_call(["python", "complex_collector.py", "--list-only", "--sleep", "0.05"])
+              try:
+                  subprocess.check_call(["python", "complex_collector.py", "--list-only", "--sleep", "0.05"])
+              except subprocess.CalledProcessError as error:
+                  print(f"Warning: complex list collection failed: {error}. Continuing daily report.")
           PY
 
       - name: Fill missing apartment complex household counts
         if: inputs.mode == 'daily'
+        continue-on-error: true
         env:
           APT_INFO_API_KEY: ${{ secrets.APT_INFO_API_KEY }}
           MOLIT_API_KEY: ${{ secrets.MOLIT_API_KEY }}

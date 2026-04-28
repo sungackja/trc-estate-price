@@ -69,7 +69,7 @@ def parse_response(response):
     return data
 
 
-def request_api(url, params, retries=2, retry_sleep=1.0):
+def request_api(url, params, retries=4, retry_sleep=3.0):
     if not APT_INFO_API_KEY:
         raise RuntimeError("APT_INFO_API_KEY is missing. Add it to your .env file.")
 
@@ -92,7 +92,7 @@ def request_api(url, params, retries=2, retry_sleep=1.0):
             last_error = f"API request failed with HTTP {response.status_code}. Body: {body}"
 
         if attempt < retries:
-            time.sleep(retry_sleep)
+            time.sleep(retry_sleep * (attempt + 1))
     else:
         raise RuntimeError(last_error or "API request failed.")
 

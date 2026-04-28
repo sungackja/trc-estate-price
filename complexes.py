@@ -176,12 +176,18 @@ def candidate_household_count(candidate):
 
 
 def get_household_count_for_trade(row):
-    return get_household_count(
+    household_count = get_household_count(
         row["gu_name"],
         row["umd_nm"],
         row["apt_name"],
         row["jibun"],
     )
+    if household_count:
+        return household_count
+
+    from building_register import get_building_register_household_count_for_trade
+
+    return get_building_register_household_count_for_trade(row)
 
 
 @lru_cache(maxsize=20000)

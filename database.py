@@ -94,6 +94,26 @@ def init_db():
             ON apartment_complexes (as2, as3, kapt_name)
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS household_count_cache (
+                cache_key TEXT PRIMARY KEY,
+                sgg_cd TEXT NOT NULL,
+                bjdong_cd TEXT,
+                land_cd TEXT,
+                bonbun TEXT,
+                bubun TEXT,
+                gu_name TEXT,
+                umd_nm TEXT,
+                apt_name TEXT NOT NULL,
+                jibun TEXT,
+                household_count INTEGER,
+                source TEXT,
+                raw_xml TEXT,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
 
 
 def column_exists(conn, table_name, column_name):

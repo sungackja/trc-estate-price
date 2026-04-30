@@ -33,8 +33,8 @@ def parse_args():
 
 
 def warm_household_count_cache(report_date):
-    rows = list(find_newly_seen_record_highs(limit=None, seen_date=report_date))
-    rows.extend(find_newly_seen_trades(limit=None, seen_date=report_date))
+    rows = list(find_newly_seen_record_highs(limit=None, seen_date=report_date, apply_filter=False))
+    rows.extend(find_newly_seen_trades(limit=None, seen_date=report_date, apply_filter=False))
 
     unique_rows = {}
     for row in rows:

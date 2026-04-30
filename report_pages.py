@@ -1,7 +1,7 @@
 from math import ceil
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageOps
 
 from complexes import get_household_count_for_trade
 from report_image import (
@@ -47,29 +47,27 @@ def draw_tiger_badge(image, draw, today_text):
     circle_size = 70
     circle_cx = MARGIN + 50
     circle_cy = HEADER_Y + HEADER_HEIGHT / 2
-    draw.ellipse(
-        (
-            circle_cx - circle_size / 2,
-            circle_cy - circle_size / 2,
-            circle_cx + circle_size / 2,
-            circle_cy + circle_size / 2,
-        ),
-        fill="#ffc43d",
-        outline="white",
-        width=3,
+    circle_box = (
+        circle_cx - circle_size / 2,
+        circle_cy - circle_size / 2,
+        circle_cx + circle_size / 2,
+        circle_cy + circle_size / 2,
     )
+    if tiger_image_path is None:
+        draw.ellipse(circle_box, fill="#ffc43d", outline="white", width=3)
+        return
 
-    if tiger_image_path:
-        tiger = Image.open(tiger_image_path).convert("RGBA")
-        target_size = (int(circle_size * 0.9), int(circle_size * 1.08))
-        tiger.thumbnail(target_size, Image.Resampling.LANCZOS)
-        image.alpha_composite(
-            tiger,
-            (
-                int(circle_cx - tiger.width / 2),
-                int(circle_cy - tiger.height / 2 - 1),
-            ),
-        )
+    tiger = Image.open(tiger_image_path).convert("RGBA")
+    tiger = ImageOps.fit(tiger, (circle_size, circle_size), method=Image.Resampling.LANCZOS)
+    mask = Image.new("L", tiger.size, 0)
+    mask_draw = ImageDraw.Draw(mask)
+    mask_draw.ellipse((0, 0, tiger.width - 1, tiger.height - 1), fill=255)
+    image.paste(
+        tiger,
+        (int(circle_cx - circle_size / 2), int(circle_cy - circle_size / 2)),
+        mask,
+    )
+    draw.ellipse(circle_box, outline="white", width=3)
 
 
 def draw_instagram(image, draw):
@@ -95,7 +93,7 @@ def draw_header(image, draw, *, title, today_text, date_text, page_number, page_
     draw.rectangle((MARGIN, HEADER_Y, MARGIN + INNER_WIDTH, HEADER_Y + HEADER_HEIGHT), fill="#b40000")
     draw_tiger_badge(image, draw, today_text)
     header_title = f"{LABEL_TODAY} {title.replace(' 리스트', '')}"
-    draw_text(draw, (PAGE_WIDTH / 2, HEADER_Y + HEADER_HEIGHT / 2 + 2), header_title, size=44, bold=True, fill="white")
+    draw_text(draw, (MARGIN + 112, HEADER_Y + HEADER_HEIGHT / 2 + 2), header_title, size=36, bold=True, fill="white", anchor="lm")
     draw_text(
         draw,
         (MARGIN + INNER_WIDTH - 20, HEADER_Y + HEADER_HEIGHT / 2 + 3),

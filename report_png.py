@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from complexes import get_household_count_for_trade
 from report_image import (
@@ -89,14 +89,13 @@ def draw_tiger_logo(image, draw, x=30, y=20, height=58):
         circle_cx + circle_size / 2,
         circle_cy + circle_size / 2,
     )
-    draw.ellipse(circle_box, fill="#ffc43d", outline="white", width=2)
-
     tiger = Image.open(tiger_image_path).convert("RGBA")
-    target_size = (int(circle_size * 0.92), int(circle_size * 1.12))
-    tiger.thumbnail(target_size, Image.Resampling.LANCZOS)
-    image_x = int(circle_cx - tiger.width / 2)
-    image_y = int(circle_cy - tiger.height / 2 - 1)
-    image.alpha_composite(tiger, (image_x, image_y))
+    tiger = ImageOps.fit(tiger, (int(circle_size), int(circle_size)), method=Image.Resampling.LANCZOS)
+    mask = Image.new("L", tiger.size, 0)
+    mask_draw = ImageDraw.Draw(mask)
+    mask_draw.ellipse((0, 0, tiger.width - 1, tiger.height - 1), fill=255)
+    image.paste(tiger, (int(circle_box[0]), int(circle_box[1])), mask)
+    draw.ellipse(circle_box, outline="white", width=2)
 
 
 def draw_instagram_id(image, draw, x=500, y=97):
@@ -183,8 +182,8 @@ def create_report_png(target_date=None, output_path=TELEGRAM_PNG_PATH, limit=38)
 
     draw.rectangle((MARGIN, 18, MARGIN + REPORT_INNER_WIDTH, 82), fill="#b40000")
     draw_tiger_logo(image, draw)
-    draw_text(draw, (400, 53), HEADER_TITLE, size=44, bold=True, fill="white")
-    draw_text(draw, (WIDTH - 32, 53), today_short, size=36, bold=True, fill="#ffe082", anchor="rm")
+    draw_text(draw, (120, 53), HEADER_TITLE, size=32, bold=True, fill="white", anchor="lm")
+    draw_text(draw, (WIDTH - 32, 53), today_short, size=34, bold=True, fill="#ffe082", anchor="rm")
 
     draw_cell(draw, MARGIN, 84, REPORT_INNER_WIDTH, 24, fill="#f5f8fb")
     draw_instagram_id(image, draw, x=MARGIN + 14)

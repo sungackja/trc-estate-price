@@ -1,8 +1,15 @@
 import re
 import json
+import csv
 from functools import lru_cache
+from pathlib import Path
+from difflib import SequenceMatcher
 
 from database import get_connection, init_db
+
+
+MANUAL_HOUSEHOLD_COUNTS_CSV = Path(__file__).resolve().parent / "manual_household_counts.csv"
+REB_COMPLEX_IDENTIFICATION_CSV = Path(__file__).resolve().parent / "reb_seoul_complex_identification.csv"
 
 
 REMOVE_WORDS = (
@@ -93,6 +100,39 @@ MANUAL_HOUSEHOLD_COUNTS = {
 }
 
 
+def to_positive_int(value):
+    try:
+        count = int(float(str(value).replace(",", "").strip()))
+    except (TypeError, ValueError):
+        return None
+    return count if count > 0 else None
+
+
+@lru_cache(maxsize=1)
+def load_manual_household_count_csv():
+    if not MANUAL_HOUSEHOLD_COUNTS_CSV.exists():
+        return {}, {}
+
+    by_jibun = {}
+    by_name = {}
+    with MANUAL_HOUSEHOLD_COUNTS_CSV.open("r", encoding="utf-8-sig", newline="") as file:
+        for row in csv.DictReader(file):
+            count = to_positive_int(row.get("household_count"))
+            if not count:
+                continue
+
+            key = (
+                row.get("gu_name") or "",
+                row.get("umd_nm") or "",
+                row.get("apt_name") or "",
+            )
+            jibun = row.get("jibun") or ""
+            by_jibun[(*key, jibun)] = count
+            by_name.setdefault(key, count)
+
+    return by_jibun, by_name
+
+
 def normalize_name(value):
     text = value or ""
     for old, new in NORMALIZE_REPLACEMENTS:
@@ -104,6 +144,42 @@ def normalize_name(value):
 
 def normalize_jibun(value):
     return re.sub(r"[^0-9-]", "", value or "")
+
+
+def normalize_reb_jibun(value):
+    text = str(value or "").strip()
+    if not text:
+        return ""
+
+    text = re.sub(r"\s+", "", text)
+    is_mountain = text.startswith("\uc0b0")
+    if is_mountain:
+        text = text[1:]
+
+    parts = []
+    for part in text.split("-"):
+        if part.isdigit():
+            parts.append(str(int(part)))
+        else:
+            parts.append(part)
+
+    normalized = "-".join(parts)
+    return ("\uc0b0" if is_mountain else "") + normalized
+
+
+def reb_address_key(value):
+    text = re.sub(r"\s+", " ", str(value or "").strip())
+    parts = text.split()
+    if parts:
+        parts[-1] = normalize_reb_jibun(parts[-1])
+    return " ".join(parts)
+
+
+def trade_reb_address_key(gu_name, dong_name, jibun, land_cd=None):
+    lot = normalize_reb_jibun(jibun)
+    if str(land_cd or "").strip() == "2" and lot and not lot.startswith("\uc0b0"):
+        lot = "\uc0b0" + lot
+    return reb_address_key(f"\uc11c\uc6b8\ud2b9\ubcc4\uc2dc {gu_name or ''} {dong_name or ''} {lot}")
 
 
 def address_has_jibun(address, dong_name, jibun):
@@ -160,6 +236,82 @@ def name_similarity_score(target, candidate_name, gu_name, dong_name):
     return score
 
 
+def reb_name_score(target, candidate_names, gu_name, dong_name):
+    target_norm = normalize_name(remove_location_words(target or "", gu_name, dong_name))
+    if not target_norm:
+        return 0
+
+    best_score = 0
+    for candidate_name in candidate_names:
+        candidate_norm = normalize_name(remove_location_words(candidate_name or "", gu_name, dong_name))
+        if not candidate_norm:
+            continue
+
+        ratio_score = int(100 * SequenceMatcher(None, target_norm, candidate_norm).ratio())
+        score = max(ratio_score, character_bigram_score(target_norm, candidate_norm))
+        if target_norm in candidate_norm or candidate_norm in target_norm:
+            score = max(score, 80)
+        best_score = max(best_score, score)
+
+    return best_score
+
+
+@lru_cache(maxsize=1)
+def load_reb_complex_identification():
+    if not REB_COMPLEX_IDENTIFICATION_CSV.exists():
+        return {}
+
+    by_address = {}
+    with REB_COMPLEX_IDENTIFICATION_CSV.open("r", encoding="utf-8-sig", newline="") as file:
+        for row in csv.DictReader(file):
+            count = to_positive_int(row.get("households"))
+            if not count:
+                continue
+
+            address_key = reb_address_key(row.get("address"))
+            if not address_key:
+                continue
+
+            by_address.setdefault(address_key, []).append(
+                {
+                    "household_count": count,
+                    "complex_id": row.get("complex_id") or "",
+                    "names": (
+                        row.get("name_price") or "",
+                        row.get("name_building") or "",
+                        row.get("name_road") or "",
+                    ),
+                }
+            )
+
+    return by_address
+
+
+def get_reb_household_count(gu_name, dong_name, apt_name, jibun=None, land_cd=None):
+    candidates = load_reb_complex_identification().get(
+        trade_reb_address_key(gu_name, dong_name, jibun, land_cd)
+    )
+    if not candidates:
+        return None
+
+    if len(candidates) == 1:
+        return candidates[0]["household_count"]
+
+    best_candidate = None
+    best_score = -1
+    for candidate in candidates:
+        score = reb_name_score(apt_name, candidate["names"], gu_name, dong_name)
+        if score > best_score:
+            best_score = score
+            best_candidate = candidate
+
+    counts = {candidate["household_count"] for candidate in candidates}
+    if best_candidate and (best_score >= 45 or len(counts) == 1):
+        return best_candidate["household_count"]
+
+    return None
+
+
 def candidate_household_count(candidate):
     stored_count = candidate["household_count"]
     if stored_count and stored_count > 0:
@@ -185,11 +337,14 @@ def candidate_household_count(candidate):
 
 
 def get_household_count_for_trade(row):
+    from building_register import trade_xml_value
+
     household_count = get_household_count(
         row["gu_name"],
         row["umd_nm"],
         row["apt_name"],
         row["jibun"],
+        trade_xml_value(row, "landCd"),
     )
     if household_count:
         return household_count
@@ -200,13 +355,26 @@ def get_household_count_for_trade(row):
 
 
 @lru_cache(maxsize=20000)
-def get_household_count(gu_name, dong_name, apt_name, jibun=None):
+def get_household_count(gu_name, dong_name, apt_name, jibun=None, land_cd=None):
     init_db()
     trade_key = (gu_name, dong_name, apt_name)
+
+    manual_by_jibun, manual_by_name = load_manual_household_count_csv()
+    manual_count = manual_by_jibun.get((*trade_key, jibun or ""))
+    if manual_count is not None:
+        return manual_count
+
+    manual_count = manual_by_name.get(trade_key)
+    if manual_count is not None:
+        return manual_count
 
     manual_count = MANUAL_HOUSEHOLD_COUNTS.get(trade_key)
     if manual_count is not None:
         return manual_count
+
+    reb_count = get_reb_household_count(gu_name, dong_name, apt_name, jibun, land_cd)
+    if reb_count:
+        return reb_count
 
     target = normalize_name(apt_name)
     alias_name = MANUAL_COMPLEX_NAME_ALIASES.get(trade_key)

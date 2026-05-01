@@ -10,6 +10,7 @@ from report_image import (
     LABEL_TODAY,
     NO_ROWS,
     TAGLINE,
+    YOUTUBE_LABEL,
     find_tiger_image_path,
     fit_text,
     format_price,
@@ -22,7 +23,7 @@ PAGE_HEIGHT = 1440
 MARGIN = 18
 INNER_WIDTH = PAGE_WIDTH - MARGIN * 2
 HEADER_Y = 18
-HEADER_HEIGHT = 96
+HEADER_HEIGHT = 116
 META_Y = HEADER_Y + HEADER_HEIGHT + 4
 META_HEIGHT = 34
 TABLE_Y = META_Y + META_HEIGHT + 8
@@ -44,8 +45,8 @@ def draw_cell(draw, x, y, width, height, fill="white", outline="#d9d9d9", width_
 
 def draw_tiger_badge(image, draw, today_text):
     tiger_image_path = find_tiger_image_path()
-    circle_size = 70
-    circle_cx = MARGIN + 50
+    circle_size = 86
+    circle_cx = MARGIN + 62
     circle_cy = HEADER_Y + HEADER_HEIGHT / 2
     circle_box = (
         circle_cx - circle_size / 2,
@@ -79,10 +80,30 @@ def draw_instagram(image, draw):
         logo = Image.open(INSTAGRAM_LOGO_PATH).convert("RGBA")
         logo = logo.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
         image.alpha_composite(logo, (x, icon_y))
+    instagram_text_x = x + icon_size + 8
+    youtube_x = instagram_text_x + 178
+    youtube_y = y - 11
     draw_text(
         draw,
-        (x + icon_size + 8, y + 1),
-        f"{INSTAGRAM_ID}   {TAGLINE}",
+        (instagram_text_x, y + 1),
+        INSTAGRAM_ID,
+        size=17,
+        fill="#333333",
+        anchor="lm",
+    )
+    draw.rounded_rectangle((youtube_x, youtube_y, youtube_x + 32, youtube_y + 22), radius=6, fill="#ff0000")
+    draw.polygon(
+        (
+            (youtube_x + 12, youtube_y + 6),
+            (youtube_x + 12, youtube_y + 16),
+            (youtube_x + 22, youtube_y + 11),
+        ),
+        fill="white",
+    )
+    draw_text(
+        draw,
+        (youtube_x + 40, y + 1),
+        YOUTUBE_LABEL,
         size=17,
         fill="#333333",
         anchor="lm",
@@ -93,12 +114,12 @@ def draw_header(image, draw, *, title, today_text, date_text, page_number, page_
     draw.rectangle((MARGIN, HEADER_Y, MARGIN + INNER_WIDTH, HEADER_Y + HEADER_HEIGHT), fill="#b40000")
     draw_tiger_badge(image, draw, today_text)
     header_title = f"{LABEL_TODAY} {title.replace(' 리스트', '')}"
-    draw_text(draw, (MARGIN + 112, HEADER_Y + HEADER_HEIGHT / 2 + 2), header_title, size=36, bold=True, fill="white", anchor="lm")
+    draw_text(draw, (PAGE_WIDTH / 2 - 28, HEADER_Y + HEADER_HEIGHT / 2 + 2), header_title, size=38, bold=True, fill="white")
     draw_text(
         draw,
         (MARGIN + INNER_WIDTH - 20, HEADER_Y + HEADER_HEIGHT / 2 + 3),
         today_text,
-        size=36,
+        size=38,
         bold=True,
         fill="#ffe082",
         anchor="rm",

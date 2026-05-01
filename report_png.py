@@ -17,6 +17,7 @@ from report_image import (
     ROW_HEIGHT,
     TAGLINE,
     WIDTH,
+    YOUTUBE_LABEL,
     build_report_rows,
     find_tiger_image_path,
     fit_text,
@@ -101,11 +102,23 @@ def draw_tiger_logo(image, draw, x=30, y=20, height=58):
 def draw_instagram_id(image, draw, x=500, y=97):
     icon_size = 15
     icon_y = y - icon_size / 2
+    youtube_x = x + icon_size + 6 + 136
+    youtube_y = y - 7.5
     if INSTAGRAM_LOGO_PATH.exists():
         logo = Image.open(INSTAGRAM_LOGO_PATH).convert("RGBA")
         logo = logo.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
         image.alpha_composite(logo, (int(x), int(icon_y)))
         draw_text(draw, (x + icon_size + 6, y + 0.5), INSTAGRAM_ID, size=13, fill="#333333", anchor="lm")
+        draw.rounded_rectangle((youtube_x, youtube_y, youtube_x + 22, youtube_y + 15), radius=4, fill="#ff0000")
+        draw.polygon(
+            (
+                (youtube_x + 8, youtube_y + 4),
+                (youtube_x + 8, youtube_y + 11),
+                (youtube_x + 15, youtube_y + 7.5),
+            ),
+            fill="white",
+        )
+        draw_text(draw, (youtube_x + 29, y + 0.5), YOUTUBE_LABEL, size=13, fill="#333333", anchor="lm")
         return
 
     scale = 4
@@ -154,6 +167,16 @@ def draw_instagram_id(image, draw, x=500, y=97):
     draw.ellipse((x + 5.0, y - 2.5, x + 10.0, y + 2.5), outline="white", width=2)
     draw.ellipse((x + icon_size - 5.5, icon_y + 3.2, x + icon_size - 3.2, icon_y + 5.5), fill="white")
     draw_text(draw, (x + icon_size + 6, y + 0.5), INSTAGRAM_ID, size=13, fill="#333333", anchor="lm")
+    draw.rounded_rectangle((youtube_x, youtube_y, youtube_x + 22, youtube_y + 15), radius=4, fill="#ff0000")
+    draw.polygon(
+        (
+            (youtube_x + 8, youtube_y + 4),
+            (youtube_x + 8, youtube_y + 11),
+            (youtube_x + 15, youtube_y + 7.5),
+        ),
+        fill="white",
+    )
+    draw_text(draw, (youtube_x + 29, y + 0.5), YOUTUBE_LABEL, size=13, fill="#333333", anchor="lm")
 
 
 def create_report_png(target_date=None, output_path=TELEGRAM_PNG_PATH, limit=38):
@@ -161,6 +184,12 @@ def create_report_png(target_date=None, output_path=TELEGRAM_PNG_PATH, limit=38)
     today = datetime.now(timezone(timedelta(hours=9))).date()
     today_text = f"{today.year}년 {today.month:02d}월 {today.day:02d}일"
     today_short = f"{today.month:02d}월 {today.day:02d}일"
+
+    header_y = 14
+    header_height = 82
+    header_center_y = header_y + header_height / 2
+    meta_y = header_y + header_height + 4
+    table_y = meta_y + 30
 
     fixed_column_width = 72 + 78 + 96 + 96 + 70 + 82
     apt_column_width = REPORT_INNER_WIDTH - fixed_column_width
@@ -175,22 +204,22 @@ def create_report_png(target_date=None, output_path=TELEGRAM_PNG_PATH, limit=38)
     ]
     table_width = sum(col[1] for col in columns)
     row_count = max(len(rows), 1)
-    height = 128 + row_count * ROW_HEIGHT + 22
+    height = table_y + ROW_HEIGHT + row_count * ROW_HEIGHT + 22
 
     image = Image.new("RGBA", (WIDTH, height), "white")
     draw = ImageDraw.Draw(image)
 
-    draw.rectangle((MARGIN, 18, MARGIN + REPORT_INNER_WIDTH, 82), fill="#b40000")
-    draw_tiger_logo(image, draw)
-    draw_text(draw, (120, 53), HEADER_TITLE, size=32, bold=True, fill="white", anchor="lm")
-    draw_text(draw, (WIDTH - 32, 53), today_short, size=34, bold=True, fill="#ffe082", anchor="rm")
+    draw.rectangle((MARGIN, header_y, MARGIN + REPORT_INNER_WIDTH, header_y + header_height), fill="#b40000")
+    draw_tiger_logo(image, draw, x=24, y=18, height=76)
+    draw_text(draw, (400, header_center_y + 1), HEADER_TITLE, size=36, bold=True, fill="white")
+    draw_text(draw, (WIDTH - 32, header_center_y + 1), today_short, size=34, bold=True, fill="#ffe082", anchor="rm")
 
-    draw_cell(draw, MARGIN, 84, REPORT_INNER_WIDTH, 24, fill="#f5f8fb")
-    draw_instagram_id(image, draw, x=MARGIN + 14)
-    draw_text(draw, (WIDTH - 36, 97), TAGLINE, size=15, anchor="rm")
+    draw_cell(draw, MARGIN, meta_y, REPORT_INNER_WIDTH, 24, fill="#f5f8fb")
+    draw_instagram_id(image, draw, x=MARGIN + 14, y=meta_y + 13)
+    draw_text(draw, (WIDTH - 36, meta_y + 13), TAGLINE, size=15, anchor="rm")
 
     x = MARGIN
-    y = 112
+    y = table_y
     draw_cell(draw, x, y, table_width, ROW_HEIGHT, fill="#d00000", outline="#d00000")
     cursor = x
     for title, width, _ in columns:

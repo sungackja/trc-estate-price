@@ -28,6 +28,7 @@ REPORT_TITLE = "\uc11c\uc6b8 \uc544\ud30c\ud2b8 \uc2e0\uace0\uac00"
 HEADER_TITLE = f"{LABEL_TODAY} {REPORT_TITLE}"
 TAGLINE = "\uc5b4\ub514\uc5d0\ub3c4 \uc5c6\ub294 \ubd80\ub3d9\uc0b0 \uc774\uc57c\uae30"
 INSTAGRAM_ID = "@tiger.rich.company"
+YOUTUBE_LABEL = "\ud0c0\uc774\uac70TV"
 NO_ROWS = "\uc2e0\uaddc \uacf5\uac1c \uc2e0\uace0\uac00\uac00 \uc544\uc9c1 \uc5c6\uc2b5\ub2c8\ub2e4."
 
 
@@ -110,6 +111,16 @@ def svg_instagram_id(x=500, y=97):
     icon_size = 15
     icon_y = y - icon_size / 2
     text_x = x + icon_size + 6
+    youtube_x = text_x + 136
+    youtube_y = y - 7.5
+    youtube_parts = [
+        f'<rect x="{youtube_x}" y="{youtube_y}" width="22" height="15" rx="4" fill="#ff0000"/>',
+        (
+            f'<polygon points="{youtube_x + 8},{youtube_y + 4} '
+            f'{youtube_x + 8},{youtube_y + 11} {youtube_x + 15},{youtube_y + 7.5}" fill="white"/>'
+        ),
+        svg_text(youtube_x + 29, y + 0.5, YOUTUBE_LABEL, size=13, fill="#333333", anchor="start"),
+    ]
     if INSTAGRAM_LOGO_PATH.exists():
         mime_type = guess_type(INSTAGRAM_LOGO_PATH.name)[0] or "image/png"
         encoded = base64.b64encode(INSTAGRAM_LOGO_PATH.read_bytes()).decode("ascii")
@@ -118,6 +129,7 @@ def svg_instagram_id(x=500, y=97):
             f'preserveAspectRatio="xMidYMid meet" '
             f'href="data:{mime_type};base64,{encoded}"/>',
             svg_text(text_x, y + 0.5, INSTAGRAM_ID, size=13, fill="#333333", anchor="start"),
+            *youtube_parts,
         ]
 
     return [
@@ -142,6 +154,7 @@ def svg_instagram_id(x=500, y=97):
         f'<circle cx="{x + icon_size / 2}" cy="{y}" r="2.6" fill="none" stroke="white" stroke-width="1.8"/>',
         f'<circle cx="{x + icon_size - 4.4}" cy="{icon_y + 4.4}" r="1.15" fill="white"/>',
         svg_text(text_x, y + 0.5, INSTAGRAM_ID, size=13, fill="#333333", anchor="start"),
+        *youtube_parts,
     ]
 
 
@@ -150,6 +163,11 @@ def create_report_image(target_date=None, output_path=REPORT_IMAGE_PATH, limit=3
     today = datetime.now(timezone(timedelta(hours=9))).date()
     today_text = f"{today.year}\ub144 {today.month:02d}\uc6d4 {today.day:02d}\uc77c"
     today_short = f"{today.month:02d}\uc6d4 {today.day:02d}\uc77c"
+    header_y = 14
+    header_height = 82
+    header_center_y = header_y + header_height / 2
+    meta_y = header_y + header_height + 4
+    table_y = meta_y + 30
 
     fixed_column_width = 72 + 78 + 96 + 96 + 70 + 82
     apt_column_width = REPORT_INNER_WIDTH - fixed_column_width
@@ -164,7 +182,7 @@ def create_report_image(target_date=None, output_path=REPORT_IMAGE_PATH, limit=3
     ]
     table_width = sum(col[1] for col in columns)
     row_count = max(len(rows), 1)
-    height = 128 + row_count * ROW_HEIGHT + 22
+    height = table_y + ROW_HEIGHT + row_count * ROW_HEIGHT + 22
 
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{height}" viewBox="0 0 {WIDTH} {height}">',
@@ -172,17 +190,17 @@ def create_report_image(target_date=None, output_path=REPORT_IMAGE_PATH, limit=3
         "text { font-family: 'Malgun Gothic', 'Noto Sans CJK KR', Arial, sans-serif; }",
         "</style>",
         svg_rect(0, 0, WIDTH, height, fill="white", stroke="white"),
-        svg_rect(MARGIN, 18, REPORT_INNER_WIDTH, 64, fill="#b40000", stroke="#b40000"),
-        *svg_tiger_logo(),
-        svg_text(120, 53, HEADER_TITLE, size=32, weight=700, fill="white", anchor="start"),
-        svg_text(WIDTH - 32, 53, today_short, size=34, weight=700, fill="#ffe082", anchor="end"),
-        svg_rect(MARGIN, 84, REPORT_INNER_WIDTH, 24, fill="#f5f8fb", stroke="#d9d9d9"),
-        *svg_instagram_id(x=MARGIN + 14),
-        svg_text(WIDTH - 36, 97, TAGLINE, size=15, anchor="end"),
+        svg_rect(MARGIN, header_y, REPORT_INNER_WIDTH, header_height, fill="#b40000", stroke="#b40000"),
+        *svg_tiger_logo(x=24, y=18, height=76),
+        svg_text(400, header_center_y + 1, HEADER_TITLE, size=36, weight=700, fill="white"),
+        svg_text(WIDTH - 32, header_center_y + 1, today_short, size=34, weight=700, fill="#ffe082", anchor="end"),
+        svg_rect(MARGIN, meta_y, REPORT_INNER_WIDTH, 24, fill="#f5f8fb", stroke="#d9d9d9"),
+        *svg_instagram_id(x=MARGIN + 14, y=meta_y + 13),
+        svg_text(WIDTH - 36, meta_y + 13, TAGLINE, size=15, anchor="end"),
     ]
 
     x = MARGIN
-    y = 112
+    y = table_y
     parts.append(svg_rect(x, y, table_width, ROW_HEIGHT, fill="#d00000", stroke="#d00000"))
     cursor = x
     for title, width, _ in columns:

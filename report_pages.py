@@ -138,24 +138,24 @@ def create_cover_page(target_date, report_type, output_path):
 
     draw_shadow_text(
         draw,
-        (PAGE_WIDTH / 2, 620),
+        (PAGE_WIDTH / 2, 582),
         cover_date_text(target_date),
-        size=210,
+        size=206,
         fill=deep_blue,
         shadow="#dddddd",
         offset=(6, 6),
     )
-    draw_shadow_text(draw, (PAGE_WIDTH / 2, 850), "최신", size=160, fill=deep_blue, shadow="#dddddd", offset=(6, 6))
+    draw_shadow_text(draw, (PAGE_WIDTH / 2, 785), "최신", size=162, fill=deep_blue, shadow="#dddddd", offset=(6, 6))
     draw_shadow_text(
         draw,
-        (PAGE_WIDTH / 2, 1085),
+        (PAGE_WIDTH / 2, 1030),
         "서울 아파트",
-        size=126,
+        size=158,
         fill=deep_blue,
         shadow="#dddddd",
         offset=(6, 6),
     )
-    draw_shadow_text(draw, (PAGE_WIDTH / 2, 1312), report_type, size=154, fill=red, shadow="#dddddd", offset=(6, 6))
+    draw_shadow_text(draw, (PAGE_WIDTH / 2, 1290), report_type, size=188, fill=red, shadow="#dddddd", offset=(6, 6))
 
     output_path = Path(output_path)
     image.convert("RGB").save(output_path, format="PNG", optimize=True)

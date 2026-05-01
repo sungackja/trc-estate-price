@@ -1,7 +1,7 @@
 from math import ceil
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from complexes import get_household_count_for_trade
 from report_image import (
@@ -31,6 +31,15 @@ TABLE_HEADER_HEIGHT = 40
 ROW_HEIGHT = 29
 ROWS_PER_PAGE = (PAGE_HEIGHT - TABLE_Y - TABLE_HEADER_HEIGHT - 24) // ROW_HEIGHT
 OUTPUT_DIR = Path("public")
+RECORD_HIGH_COVER_PATH = OUTPUT_DIR / "telegram-record-highs-cover.png"
+LATEST_TRADE_COVER_PATH = OUTPUT_DIR / "telegram-latest-trades-cover.png"
+COVER_FONT_CANDIDATES = [
+    Path(__file__).resolve().parent / "static" / "fonts" / "Pretendard-Black.otf",
+    Path(__file__).resolve().parent / "static" / "fonts" / "Pretendard-Black.ttf",
+    Path(r"C:\Windows\Fonts\Pretendard-Black.otf"),
+    Path(r"C:\Windows\Fonts\Pretendard-Black.ttf"),
+    Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Black.ttc"),
+]
 
 
 class ReportRow(list):
@@ -41,6 +50,124 @@ class ReportRow(list):
 
 def draw_cell(draw, x, y, width, height, fill="white", outline="#d9d9d9", width_px=1):
     draw.rectangle((x, y, x + width, y + height), fill=fill, outline=outline, width=width_px)
+
+
+def cover_font(size):
+    for path in COVER_FONT_CANDIDATES:
+        if path.exists():
+            return ImageFont.truetype(str(path), size)
+    return ImageFont.load_default()
+
+
+def draw_shadow_text(draw, xy, text, *, size, fill, bold=True, anchor="mm", shadow="#d8d8d8", offset=(5, 5)):
+    shadow_xy = (xy[0] + offset[0], xy[1] + offset[1])
+    text_font = cover_font(size)
+    draw.text(shadow_xy, str(text), font=text_font, fill=shadow, anchor=anchor)
+    draw.text(xy, str(text), font=text_font, fill=fill, anchor=anchor)
+
+
+def cover_date_text(target_date):
+    month = int(target_date[5:7])
+    day = int(target_date[8:10])
+    return f"{month}/{day}"
+
+
+def remove_near_white_background(image):
+    image = image.convert("RGBA")
+    pixels = image.load()
+    width, height = image.size
+    queue = []
+    seen = set()
+
+    def is_background(x, y):
+        red, green, blue, _ = pixels[x, y]
+        return red > 218 and green > 218 and blue > 218 and max(red, green, blue) - min(red, green, blue) < 28
+
+    for x in range(width):
+        queue.append((x, 0))
+        queue.append((x, height - 1))
+    for y in range(height):
+        queue.append((0, y))
+        queue.append((width - 1, y))
+
+    while queue:
+        x, y = queue.pop()
+        if (x, y) in seen or not (0 <= x < width and 0 <= y < height):
+            continue
+        seen.add((x, y))
+        if not is_background(x, y):
+            continue
+
+        red, green, blue, _ = pixels[x, y]
+        pixels[x, y] = (red, green, blue, 0)
+        queue.extend(((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)))
+    return image
+
+
+def create_cover_page(target_date, report_type, output_path):
+    OUTPUT_DIR.mkdir(exist_ok=True)
+
+    image = Image.new("RGBA", (PAGE_WIDTH, PAGE_HEIGHT), "white")
+    draw = ImageDraw.Draw(image)
+
+    blue = "#0034a5"
+    deep_blue = "#002582"
+    yellow = "#f7cf28"
+    orange = "#ff5a00"
+    red = "#e80000"
+
+    header_height = 410
+    draw.rectangle((0, 0, PAGE_WIDTH, header_height), fill=blue)
+    for x in range(PAGE_WIDTH):
+        shade = int(22 * (x / PAGE_WIDTH))
+        draw.line((x, 0, x, header_height), fill=(0, max(30, 47 - shade), 153 - shade, 255))
+
+    tiger_path = find_tiger_image_path()
+    if tiger_path:
+        tiger = Image.open(tiger_path).convert("RGBA")
+        tiger = ImageOps.fit(tiger, (360, 360), method=Image.Resampling.LANCZOS, centering=(0.48, 0.38))
+        tiger = remove_near_white_background(tiger)
+        image.alpha_composite(tiger, (10, 50))
+
+    draw.polygon(((1004, 0), (PAGE_WIDTH, 0), (PAGE_WIDTH, header_height), (918, header_height)), fill="white")
+    draw.polygon(((1048, 0), (PAGE_WIDTH, 0), (986, header_height), (950, header_height)), fill=orange)
+
+    draw_shadow_text(draw, (552, 202), "타이거 TV", size=82, fill="white", shadow="#001f66", offset=(4, 4))
+    draw_shadow_text(draw, (845, 202), "리포트", size=82, fill=yellow, shadow="#001f66", offset=(4, 4))
+    draw.line((0, header_height, PAGE_WIDTH, header_height), fill="#eeeeee", width=2)
+
+    draw_shadow_text(
+        draw,
+        (PAGE_WIDTH / 2, 620),
+        cover_date_text(target_date),
+        size=210,
+        fill=deep_blue,
+        shadow="#dddddd",
+        offset=(6, 6),
+    )
+    draw_shadow_text(draw, (PAGE_WIDTH / 2, 850), "최신", size=160, fill=deep_blue, shadow="#dddddd", offset=(6, 6))
+    draw_shadow_text(
+        draw,
+        (PAGE_WIDTH / 2, 1085),
+        "서울 아파트",
+        size=126,
+        fill=deep_blue,
+        shadow="#dddddd",
+        offset=(6, 6),
+    )
+    draw_shadow_text(draw, (PAGE_WIDTH / 2, 1312), report_type, size=154, fill=red, shadow="#dddddd", offset=(6, 6))
+
+    output_path = Path(output_path)
+    image.convert("RGB").save(output_path, format="PNG", optimize=True)
+    return output_path
+
+
+def create_record_high_cover_page(target_date):
+    return create_cover_page(target_date, "신고가", RECORD_HIGH_COVER_PATH)
+
+
+def create_latest_trade_cover_page(target_date):
+    return create_cover_page(target_date, "실거래가", LATEST_TRADE_COVER_PATH)
 
 
 def draw_tiger_badge(image, draw, today_text):

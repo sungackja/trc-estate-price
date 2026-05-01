@@ -4,7 +4,12 @@ import requests
 
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_ENABLED, REQUEST_TIMEOUT_SECONDS
 from report_image import REPORT_IMAGE_PATH, default_target_date
-from report_pages import create_latest_trade_report_pages, create_record_high_report_pages
+from report_pages import (
+    create_latest_trade_cover_page,
+    create_latest_trade_report_pages,
+    create_record_high_cover_page,
+    create_record_high_report_pages,
+)
 from records import (
     find_newly_seen_record_highs,
     find_newly_seen_trades,
@@ -29,10 +34,10 @@ def build_caption(title, report_date=None, page_number=1, page_count=1):
     )
 
 
-def send_photo(image_path, caption):
+def send_photo(image_path, caption, chat_id=None):
     url = TELEGRAM_API_URL.format(token=TELEGRAM_BOT_TOKEN, method="sendPhoto")
     data = {
-        "chat_id": TELEGRAM_CHAT_ID,
+        "chat_id": chat_id or TELEGRAM_CHAT_ID,
         "caption": caption,
     }
 
@@ -48,10 +53,10 @@ def send_photo(image_path, caption):
         raise RuntimeError(f"Telegram send failed: HTTP {response.status_code} / {response.text[:300]}")
 
 
-def send_message(text):
+def send_message(text, chat_id=None):
     url = TELEGRAM_API_URL.format(token=TELEGRAM_BOT_TOKEN, method="sendMessage")
     data = {
-        "chat_id": TELEGRAM_CHAT_ID,
+        "chat_id": chat_id or TELEGRAM_CHAT_ID,
         "text": text,
     }
     response = requests.post(url, data=data, timeout=REQUEST_TIMEOUT_SECONDS)
@@ -70,8 +75,11 @@ def send_telegram_report(image_path=REPORT_IMAGE_PATH, report_date=None):
 
     sent_count = 0
     if record_rows:
-        paths = create_record_high_report_pages(record_rows, report_date)
+        cover_path = create_record_high_cover_page(report_date)
         title = "\uc624\ub298 \uc0c8\ub85c \ud3ec\ucc29\ub41c \uc11c\uc6b8 \uc544\ud30c\ud2b8 \uc2e0\uace0\uac00"
+        send_photo(cover_path, build_caption(title, report_date, 1, 1))
+        sent_count += 1
+        paths = create_record_high_report_pages(record_rows, report_date)
         page_count = len(paths)
         for index, path in enumerate(paths, start=1):
             send_photo(path, build_caption(title, report_date, index, page_count))
@@ -82,8 +90,11 @@ def send_telegram_report(image_path=REPORT_IMAGE_PATH, report_date=None):
         send_message(f"오늘 신규 공개 서울 아파트 신고가가 없습니다.\n리포트 기준일: {report_date}{extra}\n{SITE_URL}")
 
     if latest_trade_rows:
-        paths = create_latest_trade_report_pages(latest_trade_rows, report_date)
+        cover_path = create_latest_trade_cover_page(report_date)
         title = "\uc624\ub298 \uc0c8\ub85c \ud3ec\ucc29\ub41c \uc11c\uc6b8 \uc544\ud30c\ud2b8 \uc2e4\uac70\ub798\uac00"
+        send_photo(cover_path, build_caption(title, report_date, 1, 1))
+        sent_count += 1
+        paths = create_latest_trade_report_pages(latest_trade_rows, report_date)
         page_count = len(paths)
         for index, path in enumerate(paths, start=1):
             send_photo(path, build_caption(title, report_date, index, page_count))

@@ -116,7 +116,7 @@ def create_cover_page(target_date, report_type, output_path):
     orange = "#ff5a00"
     red = "#e80000"
 
-    header_height = 410
+    header_height = 320
     draw.rectangle((0, 0, PAGE_WIDTH, header_height), fill=blue)
     for x in range(PAGE_WIDTH):
         shade = int(22 * (x / PAGE_WIDTH))
@@ -125,37 +125,37 @@ def create_cover_page(target_date, report_type, output_path):
     tiger_path = find_tiger_image_path()
     if tiger_path:
         tiger = Image.open(tiger_path).convert("RGBA")
-        tiger = ImageOps.fit(tiger, (360, 360), method=Image.Resampling.LANCZOS, centering=(0.48, 0.38))
+        tiger = ImageOps.fit(tiger, (310, 310), method=Image.Resampling.LANCZOS, centering=(0.48, 0.38))
         tiger = remove_near_white_background(tiger)
-        image.alpha_composite(tiger, (10, 50))
+        image.alpha_composite(tiger, (24, 12))
 
     draw.polygon(((1004, 0), (PAGE_WIDTH, 0), (PAGE_WIDTH, header_height), (918, header_height)), fill="white")
     draw.polygon(((1048, 0), (PAGE_WIDTH, 0), (986, header_height), (950, header_height)), fill=orange)
 
-    draw_shadow_text(draw, (552, 202), "타이거 TV", size=82, fill="white", shadow="#001f66", offset=(4, 4))
-    draw_shadow_text(draw, (845, 202), "리포트", size=82, fill=yellow, shadow="#001f66", offset=(4, 4))
+    draw_shadow_text(draw, (552, 160), "타이거 TV", size=82, fill="white", shadow="#001f66", offset=(4, 4))
+    draw_shadow_text(draw, (845, 160), "리포트", size=82, fill=yellow, shadow="#001f66", offset=(4, 4))
     draw.line((0, header_height, PAGE_WIDTH, header_height), fill="#eeeeee", width=2)
 
     draw_shadow_text(
         draw,
-        (PAGE_WIDTH / 2, 582),
+        (PAGE_WIDTH / 2, 540),
         cover_date_text(target_date),
-        size=206,
+        size=228,
         fill=deep_blue,
         shadow="#dddddd",
         offset=(6, 6),
     )
-    draw_shadow_text(draw, (PAGE_WIDTH / 2, 785), "최신", size=162, fill=deep_blue, shadow="#dddddd", offset=(6, 6))
+    draw_shadow_text(draw, (PAGE_WIDTH / 2, 735), "최신", size=188, fill=deep_blue, shadow="#dddddd", offset=(6, 6))
     draw_shadow_text(
         draw,
-        (PAGE_WIDTH / 2, 1030),
+        (PAGE_WIDTH / 2, 970),
         "서울 아파트",
-        size=158,
+        size=182,
         fill=deep_blue,
         shadow="#dddddd",
         offset=(6, 6),
     )
-    draw_shadow_text(draw, (PAGE_WIDTH / 2, 1290), report_type, size=188, fill=red, shadow="#dddddd", offset=(6, 6))
+    draw_shadow_text(draw, (PAGE_WIDTH / 2, 1240), report_type, size=220, fill=red, shadow="#dddddd", offset=(6, 6))
 
     output_path = Path(output_path)
     image.convert("RGB").save(output_path, format="PNG", optimize=True)
@@ -200,7 +200,7 @@ def draw_tiger_badge(image, draw, today_text):
 
 def draw_instagram(image, draw):
     icon_size = 24
-    x = MARGIN + 535
+    x = MARGIN + 14
     y = META_Y + META_HEIGHT / 2
     icon_y = int(y - icon_size / 2)
     if INSTAGRAM_LOGO_PATH.exists():
@@ -256,10 +256,11 @@ def draw_header(image, draw, *, title, today_text, date_text, page_number, page_
     draw_instagram(image, draw)
     draw_text(
         draw,
-        (MARGIN + 430, META_Y + META_HEIGHT / 2 + 1),
+        (MARGIN + INNER_WIDTH - 18, META_Y + META_HEIGHT / 2 + 1),
         f"{page_number}/{page_count}",
         size=18,
         fill="#6b7280",
+        anchor="rm",
     )
 
 

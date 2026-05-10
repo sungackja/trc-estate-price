@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from math import ceil
 from pathlib import Path
 
@@ -72,6 +73,10 @@ def cover_date_text(target_date):
     return f"{month}/{day}"
 
 
+def current_kst_date():
+    return datetime.now(timezone(timedelta(hours=9))).date().isoformat()
+
+
 def remove_near_white_background(image):
     image = image.convert("RGBA")
     pixels = image.load()
@@ -104,8 +109,9 @@ def remove_near_white_background(image):
     return image
 
 
-def create_cover_page(target_date, report_type, output_path):
+def create_cover_page(target_date, report_type, output_path, display_date=None):
     OUTPUT_DIR.mkdir(exist_ok=True)
+    display_date = display_date or current_kst_date()
 
     image = Image.new("RGBA", (PAGE_WIDTH, PAGE_HEIGHT), "white")
     draw = ImageDraw.Draw(image)
@@ -139,7 +145,7 @@ def create_cover_page(target_date, report_type, output_path):
     draw_shadow_text(
         draw,
         (PAGE_WIDTH / 2, 540),
-        cover_date_text(target_date),
+        cover_date_text(display_date),
         size=228,
         fill=deep_blue,
         shadow="#dddddd",
@@ -162,12 +168,12 @@ def create_cover_page(target_date, report_type, output_path):
     return output_path
 
 
-def create_record_high_cover_page(target_date):
-    return create_cover_page(target_date, "신고가", RECORD_HIGH_COVER_PATH)
+def create_record_high_cover_page(target_date, display_date=None):
+    return create_cover_page(target_date, "신고가", RECORD_HIGH_COVER_PATH, display_date=display_date)
 
 
-def create_latest_trade_cover_page(target_date):
-    return create_cover_page(target_date, "실거래가", LATEST_TRADE_COVER_PATH)
+def create_latest_trade_cover_page(target_date, display_date=None):
+    return create_cover_page(target_date, "실거래가", LATEST_TRADE_COVER_PATH, display_date=display_date)
 
 
 def draw_tiger_badge(image, draw, today_text):
@@ -332,16 +338,18 @@ def create_paginated_report_pngs(
     columns,
     row_formatter,
     empty_text,
+    display_date=None,
 ):
     OUTPUT_DIR.mkdir(exist_ok=True)
+    display_date = display_date or current_kst_date()
     for old_path in OUTPUT_DIR.glob(f"{file_prefix}-*.png"):
         old_path.unlink()
 
     rows = list(rows)
     page_count = max(1, ceil(len(rows) / ROWS_PER_PAGE))
     created_paths = []
-    today_month_day = target_date[5:7] + "월 " + target_date[8:10] + "일"
-    date_text = target_date[:4] + "년 " + target_date[5:7] + "월 " + target_date[8:10] + "일"
+    today_month_day = display_date[5:7] + "월 " + display_date[8:10] + "일"
+    date_text = display_date[:4] + "년 " + display_date[5:7] + "월 " + display_date[8:10] + "일"
 
     for page_index in range(page_count):
         start = page_index * ROWS_PER_PAGE

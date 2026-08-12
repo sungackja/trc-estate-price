@@ -181,6 +181,27 @@ jobs:
           path: trades-sqlite-snapshot.zip
           retention-days: 7
 
+      - name: Package Seoul-region MOLIT relay for Vercel
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
+        run: |
+          mkdir -p .vercel/output/functions/api/molit.func
+          cp vercel/molit-relay/index.js .vercel/output/functions/api/molit.func/index.js
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          function_config = {
+              "runtime": "nodejs22.x",
+              "handler": "index.js",
+              "maxDuration": 30,
+              "launcherType": "Nodejs",
+              "shouldAddHelpers": True,
+              "regions": ["icn1"],
+          }
+          config_path = Path(".vercel/output/functions/api/molit.func/.vc-config.json")
+          config_path.write_text(json.dumps(function_config), encoding="utf-8")
+          PY
+
       - name: Deploy generated public directory to Vercel
         if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
         run: |

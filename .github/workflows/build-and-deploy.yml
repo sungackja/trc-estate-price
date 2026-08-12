@@ -205,7 +205,6 @@ jobs:
       - name: Deploy generated public directory to Vercel
         if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
         run: |
-          rm -rf .vercel
           mkdir -p .vercel/output/static
           printf '{"orgId":"%s","projectId":"%s"}' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
           printf '{"version":3}' > .vercel/output/config.json

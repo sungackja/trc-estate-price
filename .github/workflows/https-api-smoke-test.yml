@@ -43,6 +43,7 @@ jobs:
         run: |
           python - <<'PY'
           import os
+          import urllib.error
           import urllib.parse
           import urllib.request
           import xml.etree.ElementTree as ET
@@ -67,6 +68,10 @@ jobs:
                   break
           if location is None:
               raise SystemExit("No trade row with building-register location fields")
+          print("Building-register location:", {
+              key: location.get(key)
+              for key in ("sggCd", "umdCd", "landCd", "bonbun", "bubun")
+          })
 
           building_url = relay + "?" + urllib.parse.urlencode({
               "service": "building-register",
@@ -79,8 +84,12 @@ jobs:
               "pageNo": "1",
               "numOfRows": "100",
           })
-          with urllib.request.urlopen(urllib.request.Request(building_url, headers=headers), timeout=60) as response:
-              building_root = ET.fromstring(response.read())
+          try:
+              with urllib.request.urlopen(urllib.request.Request(building_url, headers=headers), timeout=60) as response:
+                  building_root = ET.fromstring(response.read())
+          except urllib.error.HTTPError as error:
+              print("Building-register HTTP error:", error.code, error.read().decode("utf-8", "replace"))
+              raise
 
           result_code = (building_root.findtext(".//resultCode") or "").strip()
           items = building_root.findall(".//item")

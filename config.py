@@ -14,7 +14,7 @@ MOLIT_API_KEY = os.getenv("MOLIT_API_KEY")
 APT_INFO_API_KEY = os.getenv("APT_INFO_API_KEY") or MOLIT_API_KEY
 
 MOLIT_API_URL = (
-    "https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/"
+    "http://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/"
     "getRTMSDataSvcAptTradeDev"
 )
 

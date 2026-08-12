@@ -185,7 +185,7 @@ jobs:
         if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
         run: |
           mkdir -p .vercel/output/functions/api/molit.func
-          cp vercel/molit-relay/index.js .vercel/output/functions/api/molit.func/index.js
+          cp api/molit.js .vercel/output/functions/api/molit.func/index.js
           python - <<'PY'
           import json
           from pathlib import Path

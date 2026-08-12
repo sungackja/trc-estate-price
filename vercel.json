@@ -1,14 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "outputDirectory": "public",
-  "rewrites": [
-    {
-      "source": "/",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/:path*",
-      "destination": "/:path*"
+  "functions": {
+    "api/molit.js": {
+      "maxDuration": 30,
+      "regions": ["icn1"]
     }
-  ]
+  }
 }

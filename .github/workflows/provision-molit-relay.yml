@@ -1,0 +1,100 @@
+name: Provision and verify MOLIT HTTPS relay
+run-name: Provision and verify MOLIT HTTPS relay
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      MOLIT_API_KEY: ${{ secrets.MOLIT_API_KEY }}
+    steps:
+      - name: Validate required secrets
+        run: |
+          test -n "$VERCEL_TOKEN"
+          test -n "$VERCEL_ORG_ID"
+          test -n "$VERCEL_PROJECT_ID"
+          test -n "$MOLIT_API_KEY"
+
+      - name: Link Vercel project
+        run: |
+          mkdir -p .vercel
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          project = {
+              "orgId": os.environ["VERCEL_ORG_ID"],
+              "projectId": os.environ["VERCEL_PROJECT_ID"],
+          }
+          Path(".vercel/project.json").write_text(
+              json.dumps(project),
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Store MOLIT key in Vercel production environment
+        run: |
+          printf '%s' "$MOLIT_API_KEY" |
+            npx vercel@latest env add MOLIT_API_KEY production               --force --sensitive --token "$VERCEL_TOKEN"
+
+  deploy:
+    needs: provision
+    uses: ./.github/workflows/build-and-deploy.yml
+    with:
+      mode: site
+      send_telegram: false
+    secrets: inherit
+
+  verify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    env:
+      MOLIT_API_KEY: ${{ secrets.MOLIT_API_KEY }}
+    steps:
+      - name: Call relay over HTTPS
+        run: |
+          curl --fail-with-body --silent --show-error             --retry 2 --retry-all-errors --max-time 60             --header "Authorization: Bearer $MOLIT_API_KEY"             --get "https://trc-estate-price.vercel.app/api/molit"             --data-urlencode "LAWD_CD=11110"             --data-urlencode "DEAL_YMD=202608"             --data-urlencode "pageNo=1"             --data-urlencode "numOfRows=10"             --output relay-response.xml
+
+      - name: Validate relay XML schema
+        run: |
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse("relay-response.xml").getroot()
+          code = root.findtext(".//resultCode")
+          message = root.findtext(".//resultMsg")
+          items = root.findall(".//item")
+          if code not in ("00", "000"):
+              raise SystemExit(f"API error: {code}/{message}")
+          if not items:
+              raise SystemExit("Relay returned no apartment trades")
+          required = {
+              "dealYear",
+              "dealMonth",
+              "dealDay",
+              "dealAmount",
+              "aptNm",
+              "aptSeq",
+              "excluUseAr",
+              "umdNm",
+              "jibun",
+              "floor",
+              "buildYear",
+          }
+          fields = {child.tag for child in items[0]}
+          missing = sorted(required - fields)
+          if missing:
+              raise SystemExit(f"Missing fields: {missing}")
+          print(f"Relay OK: {len(items)} rows, result={code}/{message}")
+          PY

@@ -98,13 +98,18 @@ def fetch_month(sgg_cd, deal_ym, page_no=1, num_rows=1000):
         raise RuntimeError("MOLIT_API_KEY is missing. Add it to your .env file.")
 
     params = {
-        "serviceKey": MOLIT_API_KEY,
         "LAWD_CD": sgg_cd,
         "DEAL_YMD": deal_ym,
         "pageNo": page_no,
         "numOfRows": num_rows,
     }
-    response = requests.get(MOLIT_API_URL, params=params, timeout=REQUEST_TIMEOUT_SECONDS)
+    headers = {"Authorization": f"Bearer {MOLIT_API_KEY}"}
+    response = requests.get(
+        MOLIT_API_URL,
+        params=params,
+        headers=headers,
+        timeout=(REQUEST_TIMEOUT_SECONDS, REQUEST_TIMEOUT_SECONDS + 15),
+    )
     response.raise_for_status()
 
     root = ET.fromstring(response.text)

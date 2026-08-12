@@ -13,9 +13,9 @@ DB_PATH = DATA_DIR / "trades.sqlite3"
 MOLIT_API_KEY = os.getenv("MOLIT_API_KEY")
 APT_INFO_API_KEY = os.getenv("APT_INFO_API_KEY") or MOLIT_API_KEY
 
-MOLIT_API_URL = (
-    "http://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/"
-    "getRTMSDataSvcAptTradeDev"
+MOLIT_API_URL = os.getenv(
+    "MOLIT_API_URL",
+    "https://trc-estate-price.vercel.app/api/molit",
 )
 
 APT_LIST_API_URL = (
@@ -39,29 +39,29 @@ TELEGRAM_ALLOWED_CHAT_IDS = os.getenv("TELEGRAM_ALLOWED_CHAT_IDS")
 TELEGRAM_ENABLED = os.getenv("TELEGRAM_ENABLED", "").lower() in ("1", "true", "yes", "y")
 
 SEOUL_GU_CODES = {
-    "11110": "\uc885\ub85c\uad6c",
-    "11140": "\uc911\uad6c",
-    "11170": "\uc6a9\uc0b0\uad6c",
-    "11200": "\uc131\ub3d9\uad6c",
-    "11215": "\uad11\uc9c4\uad6c",
-    "11230": "\ub3d9\ub300\ubb38\uad6c",
-    "11260": "\uc911\ub791\uad6c",
-    "11290": "\uc131\ubd81\uad6c",
-    "11305": "\uac15\ubd81\uad6c",
-    "11320": "\ub3c4\ubd09\uad6c",
-    "11350": "\ub178\uc6d0\uad6c",
-    "11380": "\uc740\ud3c9\uad6c",
-    "11410": "\uc11c\ub300\ubb38\uad6c",
-    "11440": "\ub9c8\ud3ec\uad6c",
-    "11470": "\uc591\ucc9c\uad6c",
-    "11500": "\uac15\uc11c\uad6c",
-    "11530": "\uad6c\ub85c\uad6c",
-    "11545": "\uae08\ucc9c\uad6c",
-    "11560": "\uc601\ub4f1\ud3ec\uad6c",
-    "11590": "\ub3d9\uc791\uad6c",
-    "11620": "\uad00\uc545\uad6c",
-    "11650": "\uc11c\ucd08\uad6c",
-    "11680": "\uac15\ub0a8\uad6c",
-    "11710": "\uc1a1\ud30c\uad6c",
-    "11740": "\uac15\ub3d9\uad6c",
+    "11110": "종로구",
+    "11140": "중구",
+    "11170": "용산구",
+    "11200": "성동구",
+    "11215": "광진구",
+    "11230": "동대문구",
+    "11260": "중랑구",
+    "11290": "성북구",
+    "11305": "강북구",
+    "11320": "도봉구",
+    "11350": "노원구",
+    "11380": "은평구",
+    "11410": "서대문구",
+    "11440": "마포구",
+    "11470": "양천구",
+    "11500": "강서구",
+    "11530": "구로구",
+    "11545": "금천구",
+    "11560": "영등포구",
+    "11590": "동작구",
+    "11620": "관악구",
+    "11650": "서초구",
+    "11680": "강남구",
+    "11710": "송파구",
+    "11740": "강동구",
 }

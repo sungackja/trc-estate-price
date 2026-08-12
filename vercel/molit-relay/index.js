@@ -4,7 +4,7 @@ const TRADE_UPSTREAM =
   "https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/" +
   "getRTMSDataSvcAptTradeDev";
 const BUILDING_UPSTREAM =
-  "https://apis.data.go.kr/1613000/BldRgstService_v2";
+  "https://apis.data.go.kr/1613000/BldRgstHubService";
 const BUILDING_OPERATIONS = new Set([
   "getBrRecapTitleInfo",
   "getBrTitleInfo",

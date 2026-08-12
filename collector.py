@@ -179,9 +179,13 @@ def collect_all(
                 failures += 1
                 print(f"  failed: {type(error).__name__}")
                 if failures >= max_failures:
-                    print(f"Stopped after {failures} failures. Check API key, network, or service approval.")
+                    message = (
+                        f"Stopped after {failures} failures. "
+                        "Check API key, network, or service approval."
+                    )
+                    print(message)
                     print(f"Partial result. API rows: {total_seen}, new DB rows: {total_inserted}")
-                    return
+                    raise RuntimeError(message) from error
                 continue
 
             failures = 0

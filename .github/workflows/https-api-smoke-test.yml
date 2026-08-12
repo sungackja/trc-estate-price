@@ -17,6 +17,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install HTTP client
+        run: pip install requests
+
       - name: Probe official HTTPS apartment trade APIs
         env:
           MOLIT_API_KEY: ${{ secrets.MOLIT_API_KEY }}

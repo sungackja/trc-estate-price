@@ -4,7 +4,7 @@ from functools import lru_cache
 
 import requests
 
-from config import BLD_REGISTRY_API_BASE_URL, BLD_REGISTRY_API_KEY, REQUEST_TIMEOUT_SECONDS
+from config import BLD_REGISTRY_API_KEY, BLD_REGISTRY_API_URL, REQUEST_TIMEOUT_SECONDS
 from database import get_connection, init_db
 
 
@@ -198,7 +198,8 @@ def request_register(operation, location):
         return []
 
     params = {
-        "serviceKey": BLD_REGISTRY_API_KEY,
+        "service": "building-register",
+        "operation": operation,
         "sigunguCd": location["sgg_cd"],
         "bjdongCd": location["bjdong_cd"],
         "platGbCd": plat_gb_cd(location["land_cd"]),
@@ -208,9 +209,10 @@ def request_register(operation, location):
         "pageNo": "1",
     }
     response = requests.get(
-        f"{BLD_REGISTRY_API_BASE_URL}/{operation}",
+        BLD_REGISTRY_API_URL,
         params=params,
-        timeout=REQUEST_TIMEOUT_SECONDS,
+        headers={"Authorization": f"Bearer {BLD_REGISTRY_API_KEY}"},
+        timeout=(REQUEST_TIMEOUT_SECONDS, REQUEST_TIMEOUT_SECONDS + 15),
     )
     response.raise_for_status()
     return extract_items(response.text)

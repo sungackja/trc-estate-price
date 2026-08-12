@@ -16,17 +16,78 @@ jobs:
     steps:
       - name: Reject unauthenticated request
         run: |
-          status=$(curl --silent --output /dev/null --write-out '%{http_code}'             --get "https://trc-estate-price.vercel.app/api/molit"             --data-urlencode "LAWD_CD=11110"             --data-urlencode "DEAL_YMD=202607")
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --get "https://trc-estate-price.vercel.app/api/molit" \
+            --data-urlencode "LAWD_CD=11110" \
+            --data-urlencode "DEAL_YMD=202607")
           test "$status" = "401"
           echo "Unauthenticated request rejected with 401"
 
       - name: Compare authenticated page sizes
         run: |
           for rows in 10 100 1000; do
-            status=$(curl --silent --show-error --max-time 60               --header "Authorization: Bearer $MOLIT_API_KEY"               --get "https://trc-estate-price.vercel.app/api/molit"               --data-urlencode "LAWD_CD=11110"               --data-urlencode "DEAL_YMD=202607"               --data-urlencode "pageNo=1"               --data-urlencode "numOfRows=$rows"               --output "relay-$rows.xml"               --write-out '%{http_code}')
+            status=$(curl --silent --show-error --max-time 60 \
+              --header "Authorization: Bearer $MOLIT_API_KEY" \
+              --get "https://trc-estate-price.vercel.app/api/molit" \
+              --data-urlencode "LAWD_CD=11110" \
+              --data-urlencode "DEAL_YMD=202607" \
+              --data-urlencode "pageNo=1" \
+              --data-urlencode "numOfRows=$rows" \
+              --output "relay-$rows.xml" \
+              --write-out '%{http_code}')
             bytes=$(wc -c < "relay-$rows.xml")
             echo "numOfRows=$rows status=$status bytes=$bytes"
           done
+
+      - name: Verify building-register relay
+        run: |
+          python - <<'PY'
+          import os
+          import urllib.parse
+          import urllib.request
+          import xml.etree.ElementTree as ET
+
+          relay = "https://trc-estate-price.vercel.app/api/molit"
+          headers = {"Authorization": f"Bearer {os.environ['MOLIT_API_KEY']}"}
+
+          trade_url = relay + "?" + urllib.parse.urlencode({
+              "LAWD_CD": "11110",
+              "DEAL_YMD": "202607",
+              "pageNo": "1",
+              "numOfRows": "100",
+          })
+          with urllib.request.urlopen(urllib.request.Request(trade_url, headers=headers), timeout=60) as response:
+              trade_root = ET.fromstring(response.read())
+
+          location = None
+          for item in trade_root.findall(".//item"):
+              values = {child.tag: (child.text or "").strip() for child in item}
+              if all(values.get(key) for key in ("sggCd", "umdCd", "bonbun", "landCd")):
+                  location = values
+                  break
+          if location is None:
+              raise SystemExit("No trade row with building-register location fields")
+
+          building_url = relay + "?" + urllib.parse.urlencode({
+              "service": "building-register",
+              "operation": "getBrRecapTitleInfo",
+              "sigunguCd": location["sggCd"],
+              "bjdongCd": location["umdCd"],
+              "platGbCd": "1" if location["landCd"] == "2" else "0",
+              "bun": location["bonbun"].zfill(4),
+              "ji": (location.get("bubun") or "0").zfill(4),
+              "pageNo": "1",
+              "numOfRows": "100",
+          })
+          with urllib.request.urlopen(urllib.request.Request(building_url, headers=headers), timeout=60) as response:
+              building_root = ET.fromstring(response.read())
+
+          result_code = (building_root.findtext(".//resultCode") or "").strip()
+          items = building_root.findall(".//item")
+          if result_code not in ("00", "000", "NORMAL_CODE"):
+              raise SystemExit(f"Building-register relay failed: {result_code}")
+          print(f"Building-register relay OK: result={result_code}, items={len(items)}")
+          PY
 
       - name: Validate successful XML response
         run: |

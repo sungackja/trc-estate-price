@@ -1,8 +1,14 @@
 const crypto = require("node:crypto");
 
-const UPSTREAM_URL =
+const TRADE_UPSTREAM =
   "https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/" +
   "getRTMSDataSvcAptTradeDev";
+const BUILDING_UPSTREAM =
+  "https://apis.data.go.kr/1613000/BldRgstService_v2";
+const BUILDING_OPERATIONS = new Set([
+  "getBrRecapTitleInfo",
+  "getBrTitleInfo",
+]);
 
 const SEOUL_GU_CODES = new Set([
   "11110", "11140", "11170", "11200", "11215",
@@ -25,6 +31,64 @@ function readQueryValue(value) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function buildTradeUrl(query, apiKey) {
+  const lawdCd = readQueryValue(query.LAWD_CD);
+  const dealYmd = readQueryValue(query.DEAL_YMD);
+  const pageNo = readQueryValue(query.pageNo) || "1";
+  const numOfRows = readQueryValue(query.numOfRows) || "100";
+
+  if (!SEOUL_GU_CODES.has(lawdCd || "") || !/^\d{6}$/.test(dealYmd || "")) {
+    return null;
+  }
+  if (!/^\d{1,5}$/.test(String(pageNo)) || !/^\d{1,4}$/.test(String(numOfRows))) {
+    return null;
+  }
+
+  const upstream = new URL(TRADE_UPSTREAM);
+  upstream.searchParams.set("serviceKey", apiKey);
+  upstream.searchParams.set("LAWD_CD", lawdCd);
+  upstream.searchParams.set("DEAL_YMD", dealYmd);
+  upstream.searchParams.set("pageNo", String(pageNo));
+  upstream.searchParams.set("numOfRows", String(numOfRows));
+  return upstream;
+}
+
+function buildBuildingUrl(query, apiKey) {
+  const operation = readQueryValue(query.operation);
+  const sigunguCd = readQueryValue(query.sigunguCd);
+  const bjdongCd = readQueryValue(query.bjdongCd);
+  const platGbCd = readQueryValue(query.platGbCd);
+  const bun = readQueryValue(query.bun);
+  const ji = readQueryValue(query.ji);
+  const pageNo = readQueryValue(query.pageNo) || "1";
+  const numOfRows = readQueryValue(query.numOfRows) || "100";
+
+  if (
+    !BUILDING_OPERATIONS.has(operation || "") ||
+    !SEOUL_GU_CODES.has(sigunguCd || "") ||
+    !/^\d{5}$/.test(bjdongCd || "") ||
+    !/^[01]$/.test(platGbCd || "") ||
+    !/^\d{4}$/.test(bun || "") ||
+    !/^\d{4}$/.test(ji || "")
+  ) {
+    return null;
+  }
+  if (!/^\d{1,5}$/.test(String(pageNo)) || !/^\d{1,4}$/.test(String(numOfRows))) {
+    return null;
+  }
+
+  const upstream = new URL(`${BUILDING_UPSTREAM}/${operation}`);
+  upstream.searchParams.set("serviceKey", apiKey);
+  upstream.searchParams.set("sigunguCd", sigunguCd);
+  upstream.searchParams.set("bjdongCd", bjdongCd);
+  upstream.searchParams.set("platGbCd", platGbCd);
+  upstream.searchParams.set("bun", bun);
+  upstream.searchParams.set("ji", ji);
+  upstream.searchParams.set("pageNo", String(pageNo));
+  upstream.searchParams.set("numOfRows", String(numOfRows));
+  return upstream;
+}
+
 module.exports = async function handler(request, response) {
   response.setHeader("Cache-Control", "no-store");
 
@@ -41,24 +105,19 @@ module.exports = async function handler(request, response) {
     return response.status(401).json({ error: "unauthorized" });
   }
 
-  const lawdCd = readQueryValue(request.query.LAWD_CD);
-  const dealYmd = readQueryValue(request.query.DEAL_YMD);
-  const pageNo = readQueryValue(request.query.pageNo) || "1";
-  const numOfRows = readQueryValue(request.query.numOfRows) || "100";
+  const service = readQueryValue(request.query.service) || "apartment-trade";
+  let upstream;
+  if (service === "apartment-trade") {
+    upstream = buildTradeUrl(request.query, apiKey);
+  } else if (service === "building-register") {
+    upstream = buildBuildingUrl(request.query, apiKey);
+  } else {
+    return response.status(400).json({ error: "invalid_service" });
+  }
 
-  if (!SEOUL_GU_CODES.has(lawdCd || "") || !/^\d{6}$/.test(dealYmd || "")) {
+  if (!upstream) {
     return response.status(400).json({ error: "invalid_query" });
   }
-  if (!/^\d{1,5}$/.test(String(pageNo)) || !/^\d{1,4}$/.test(String(numOfRows))) {
-    return response.status(400).json({ error: "invalid_pagination" });
-  }
-
-  const upstream = new URL(UPSTREAM_URL);
-  upstream.searchParams.set("serviceKey", apiKey);
-  upstream.searchParams.set("LAWD_CD", lawdCd);
-  upstream.searchParams.set("DEAL_YMD", dealYmd);
-  upstream.searchParams.set("pageNo", String(pageNo));
-  upstream.searchParams.set("numOfRows", String(numOfRows));
 
   try {
     const upstreamResponse = await fetch(upstream, {

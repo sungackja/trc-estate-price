@@ -1,5 +1,5 @@
-name: HTTPS API smoke test
-run-name: HTTPS API smoke test
+name: HTTPS relay smoke test
+run-name: HTTPS relay smoke test
 
 on:
   workflow_dispatch:
@@ -11,88 +11,44 @@ jobs:
   smoke-test:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      MOLIT_API_KEY: ${{ secrets.MOLIT_API_KEY }}
     steps:
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Reject unauthenticated request
+        run: |
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}'             --get "https://trc-estate-price.vercel.app/api/molit"             --data-urlencode "LAWD_CD=11110"             --data-urlencode "DEAL_YMD=202607")
+          test "$status" = "401"
+          echo "Unauthenticated request rejected with 401"
 
-      - name: Install HTTP client
-        run: pip install requests
+      - name: Compare authenticated page sizes
+        run: |
+          for rows in 10 100 1000; do
+            status=$(curl --silent --show-error --max-time 60               --header "Authorization: Bearer $MOLIT_API_KEY"               --get "https://trc-estate-price.vercel.app/api/molit"               --data-urlencode "LAWD_CD=11110"               --data-urlencode "DEAL_YMD=202607"               --data-urlencode "pageNo=1"               --data-urlencode "numOfRows=$rows"               --output "relay-$rows.xml"               --write-out '%{http_code}')
+            bytes=$(wc -c < "relay-$rows.xml")
+            echo "numOfRows=$rows status=$status bytes=$bytes"
+          done
 
-      - name: Probe official HTTPS apartment trade APIs
-        env:
-          MOLIT_API_KEY: ${{ secrets.MOLIT_API_KEY }}
+      - name: Validate successful XML response
         run: |
           python - <<'PY'
-          import os
           import xml.etree.ElementTree as ET
-
-          import requests
-
-          key = os.environ.get("MOLIT_API_KEY")
-          if not key:
-              raise SystemExit("MOLIT_API_KEY is missing")
-
-          endpoints = {
-              "detailed": (
-                  "https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/"
-                  "getRTMSDataSvcAptTradeDev"
-              ),
-              "standard": (
-                  "https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/"
-                  "getRTMSDataSvcAptTrade"
-              ),
-          }
-          params = {
-              "serviceKey": key,
-              "LAWD_CD": "11110",
-              "DEAL_YMD": "202608",
-              "pageNo": 1,
-              "numOfRows": 10,
-          }
-          required = {
-              "dealYear",
-              "dealMonth",
-              "dealDay",
-              "dealAmount",
-              "aptNm",
-              "excluUseAr",
-              "umdNm",
-              "jibun",
-              "floor",
-              "buildYear",
-          }
+          from pathlib import Path
 
           usable = []
-          for name, url in endpoints.items():
+          for rows in (10, 100, 1000):
+              path = Path(f"relay-{rows}.xml")
               try:
-                  response = requests.get(url, params=params, timeout=30)
-                  print(f"{name}: HTTP {response.status_code}")
-                  if response.status_code != 200:
-                      continue
-                  root = ET.fromstring(response.text)
-                  code = root.findtext(".//resultCode")
-                  message = root.findtext(".//resultMsg")
-                  items = root.findall(".//item")
-                  print(f"{name}: result={code}/{message}, items={len(items)}")
-                  if code not in ("00", "000") or not items:
-                      continue
-                  fields = {child.tag for child in items[0]}
-                  missing = sorted(required - fields)
-                  print(f"{name}: missing_required_fields={missing}")
-                  print(
-                      f"{name}: aptSeq={'aptSeq' in fields}, "
-                      f"cdealType={'cdealType' in fields}"
-                  )
-                  if not missing:
-                      usable.append(name)
-              except requests.RequestException as error:
-                  print(f"{name}: network_error={type(error).__name__}")
+                  root = ET.parse(path).getroot()
               except ET.ParseError:
-                  print(f"{name}: invalid_xml")
+                  print(f"numOfRows={rows}: not XML")
+                  continue
+              code = root.findtext(".//resultCode")
+              items = root.findall(".//item")
+              print(f"numOfRows={rows}: result={code}, items={len(items)}")
+              if code in ("00", "000") and items:
+                  usable.append(rows)
 
           if not usable:
-              raise SystemExit("No usable HTTPS apartment trade API")
-          print("Usable HTTPS endpoints:", ", ".join(usable))
+              raise SystemExit("No usable relay page size")
+          print("Usable page sizes:", usable)
           PY
